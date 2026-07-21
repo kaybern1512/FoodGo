@@ -8,6 +8,8 @@ class FoodOrder {
   final String customerId;
   final String restaurantId;
   final String? shipperId;
+  final String? shipperName;
+  final String? shipperPhone;
   final String customerName;
   final String customerPhone;
   final String deliveryAddress;
@@ -27,6 +29,8 @@ class FoodOrder {
     required this.customerId,
     required this.restaurantId,
     this.shipperId,
+    this.shipperName,
+    this.shipperPhone,
     required this.customerName,
     required this.customerPhone,
     required this.deliveryAddress,
@@ -77,6 +81,8 @@ class FoodOrder {
       customerId: map['customerId']?.toString() ?? '',
       restaurantId: map['restaurantId']?.toString() ?? '',
       shipperId: map['shipperId']?.toString(),
+      shipperName: map['shipperName']?.toString(),
+      shipperPhone: map['shipperPhone']?.toString(),
       customerName: map['customerName']?.toString() ?? '',
       customerPhone: map['customerPhone']?.toString() ?? '',
       deliveryAddress: map['deliveryAddress']?.toString() ?? '',
@@ -101,6 +107,8 @@ class FoodOrder {
       'customerId': customerId,
       'restaurantId': restaurantId,
       'shipperId': shipperId,
+      'shipperName': shipperName,
+      'shipperPhone': shipperPhone,
       'customerName': customerName,
       'customerPhone': customerPhone,
       'deliveryAddress': deliveryAddress,
@@ -122,6 +130,8 @@ class FoodOrder {
     String? customerId,
     String? restaurantId,
     String? shipperId,
+    String? shipperName,
+    String? shipperPhone,
     String? customerName,
     String? customerPhone,
     String? deliveryAddress,
@@ -141,6 +151,8 @@ class FoodOrder {
       customerId: customerId ?? this.customerId,
       restaurantId: restaurantId ?? this.restaurantId,
       shipperId: shipperId ?? this.shipperId,
+      shipperName: shipperName ?? this.shipperName,
+      shipperPhone: shipperPhone ?? this.shipperPhone,
       customerName: customerName ?? this.customerName,
       customerPhone: customerPhone ?? this.customerPhone,
       deliveryAddress: deliveryAddress ?? this.deliveryAddress,

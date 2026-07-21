@@ -235,6 +235,8 @@ class _AvailableOrdersScreenState extends State<AvailableOrdersScreen> {
                                               await orderProvider.acceptOrder(
                                             order.id,
                                             user!.id,
+                                            shipperName: user.fullName,
+                                            shipperPhone: user.phone,
                                           );
                                           if (context.mounted) {
                                             ScaffoldMessenger.of(context)

@@ -110,6 +110,51 @@ class OrderDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
+            if (order.shipperId != null || (order.shipperName != null && order.shipperName!.isNotEmpty)) ...[
+              const SizedBox(height: 16),
+              const Text('Thông tin Tài xế giao hàng',
+                  style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Card(
+                color: Colors.blue.shade50,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
+                  side: BorderSide(color: Colors.blue.shade200),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        backgroundColor: Colors.blue,
+                        child: Icon(Icons.directions_bike, color: Colors.white),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order.shipperName ?? 'Tài xế giao hàng',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                            if (order.shipperPhone != null &&
+                                order.shipperPhone!.isNotEmpty)
+                              Text(
+                                'SĐT: ${order.shipperPhone}',
+                                style: const TextStyle(
+                                    color: AppColors.textSecondary, fontSize: 13),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             // Thanh toán
             Card(

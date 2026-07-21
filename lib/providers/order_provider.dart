@@ -139,11 +139,13 @@ class OrderProvider extends ChangeNotifier {
   }
 
   /// Shipper nhận đơn hàng
-  Future<bool> acceptOrder(String orderId, String shipperId) async {
+  Future<bool> acceptOrder(String orderId, String shipperId,
+      {String? shipperName, String? shipperPhone}) async {
     _setLoading(true);
     _setError(null);
     try {
-      await _orderService.acceptOrderByShipper(orderId, shipperId);
+      await _orderService.acceptOrderByShipper(orderId, shipperId,
+          shipperName: shipperName, shipperPhone: shipperPhone);
       _orders.removeWhere((o) => o.id == orderId);
       notifyListeners();
       return true;

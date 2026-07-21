@@ -134,7 +134,7 @@ class OrderService {
 
   /// Shipper nhận đơn hàng (dùng transaction để tránh xung đột)
   Future<void> acceptOrderByShipper(
-      String orderId, String shipperId) async {
+      String orderId, String shipperId, {String? shipperName, String? shipperPhone}) async {
     try {
       await _firestore.runTransaction((transaction) async {
         final orderDoc = await transaction.get(_ordersRef.doc(orderId));
@@ -146,11 +146,18 @@ class OrderService {
         if (currentStatus != OrderStatus.waitingForShipper.toFirestoreString()) {
           throw Exception('Đơn hàng đã được nhận bởi shipper khác');
         }
-        transaction.update(_ordersRef.doc(orderId), {
+        final updates = <String, dynamic>{
           'shipperId': shipperId,
           'orderStatus': OrderStatus.delivering.toFirestoreString(),
           'updatedAt': Timestamp.now(),
-        });
+        };
+        if (shipperName != null && shipperName.isNotEmpty) {
+          updates['shipperName'] = shipperName;
+        }
+        if (shipperPhone != null && shipperPhone.isNotEmpty) {
+          updates['shipperPhone'] = shipperPhone;
+        }
+        transaction.update(_ordersRef.doc(orderId), updates);
       });
     } catch (e) {
       throw Exception('Không thể nhận đơn hàng: $e');
