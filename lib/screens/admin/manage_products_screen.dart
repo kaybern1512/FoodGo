@@ -123,7 +123,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                       onChanged: (value) => productProvider
                                           .toggleAvailability(
                                               product.id, value),
-                                      activeColor: AppColors.primary,
+                                      activeThumbColor: AppColors.primary,
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete_outline,

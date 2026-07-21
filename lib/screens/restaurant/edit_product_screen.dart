@@ -67,6 +67,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
     setState(() => _isSaving = true);
     try {
+      final productProvider = context.read<ProductProvider>();
       String imageUrl = _imageUrlController.text.trim();
       if (_imageFile != null) {
         try {
@@ -85,9 +86,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
         'imageUrl': imageUrl,
       };
 
-      final success = await context
-          .read<ProductProvider>()
-          .updateProduct(_product!.id, updates);
+      final success = await productProvider.updateProduct(_product!.id, updates);
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:foodgo/screens/shipper/available_orders_screen.dart';
 import 'package:foodgo/screens/shipper/current_delivery_screen.dart';
+import 'package:foodgo/screens/shipper/shipper_earnings_screen.dart';
 import 'package:foodgo/screens/shipper/shipper_history_screen.dart';
-import 'package:foodgo/screens/common/profile_screen.dart';
+import 'package:foodgo/screens/shipper/shipper_profile_screen.dart';
 
 class ShipperMainScreen extends StatefulWidget {
   const ShipperMainScreen({super.key});
@@ -17,8 +18,9 @@ class _ShipperMainScreenState extends State<ShipperMainScreen> {
   final List<Widget> _screens = const [
     AvailableOrdersScreen(),
     CurrentDeliveryScreen(),
+    ShipperEarningsScreen(),
     ShipperHistoryScreen(),
-    ProfileScreen(),
+    ShipperProfileScreen(),
   ];
 
   @override
@@ -31,16 +33,22 @@ class _ShipperMainScreenState extends State<ShipperMainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.local_shipping_outlined),
             activeIcon: Icon(Icons.local_shipping),
-            label: 'Đơn có thể nhận',
+            label: 'Nhận đơn',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.directions_bike_outlined),
             activeIcon: Icon(Icons.directions_bike),
             label: 'Đang giao',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            activeIcon: Icon(Icons.account_balance_wallet),
+            label: 'Thu nhập',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.history_outlined),

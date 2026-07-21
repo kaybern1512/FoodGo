@@ -70,11 +70,10 @@ class _RestaurantProductsScreenState
       floatingActionButton: restaurant != null
           ? FloatingActionButton(
               onPressed: () async {
-                await Navigator.of(context).pushNamed(AppRoutes.addProduct);
+                final nav = Navigator.of(context);
+                await nav.pushNamed(AppRoutes.addProduct);
                 if (mounted && restaurant.id.isNotEmpty) {
-                  context
-                      .read<ProductProvider>()
-                      .loadProductsByRestaurant(restaurant.id);
+                  _loadProducts();
                 }
               },
               backgroundColor: AppColors.primary,
@@ -133,7 +132,7 @@ class _RestaurantProductsScreenState
                                     onChanged: (value) => productProvider
                                         .toggleAvailability(
                                             product.id, value),
-                                    activeColor: AppColors.primary,
+                                     activeThumbColor: AppColors.primary,
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.edit_outlined),

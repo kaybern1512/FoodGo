@@ -15,13 +15,22 @@ class ManageUsersScreen extends StatefulWidget {
 
 class _ManageUsersScreenState extends State<ManageUsersScreen> {
   final UserService _userService = UserService();
+  final TextEditingController _searchController = TextEditingController();
   List<AppUser> _users = [];
   bool _isLoading = true;
+  String _searchQuery = '';
+  UserRole? _selectedRoleFilter;
 
   @override
   void initState() {
     super.initState();
     _loadUsers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUsers() async {
@@ -92,30 +101,122 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredUsers = _users.where((user) {
+      if (_selectedRoleFilter != null && user.role != _selectedRoleFilter) {
+        return false;
+      }
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        return user.fullName.toLowerCase().contains(q) ||
+            user.email.toLowerCase().contains(q) ||
+            user.phone.contains(q);
+      }
+      return true;
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Người dùng (${_users.length})'),
+        title: Text('Người dùng (${filteredUsers.length}/${_users.length})'),
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadUsers),
         ],
       ),
-      body: _isLoading
-          ? const LoadingWidget(message: 'Đang tải danh sách người dùng...')
-          : _users.isEmpty
-              ? const EmptyStateWidget(
-                  message: 'Chưa có người dùng nào', icon: Icons.people)
-              : RefreshIndicator(
-                  onRefresh: _loadUsers,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                    itemCount: _users.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final user = _users[index];
-                      final isPending = !user.isActive &&
-                          (user.role == UserRole.restaurant ||
-                              user.role == UserRole.shipper);
-                      final roleColor = _roleColor(user.role);
+      body: Column(
+        children: [
+          // ── Search Bar ──
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.defaultPadding, vertical: 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Tìm kiếm tên, email, SĐT...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+              onChanged: (v) => setState(() => _searchQuery = v),
+            ),
+          ),
+
+          // ── Role Filter Chips ──
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.defaultPadding),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('Tất cả'),
+                  selected: _selectedRoleFilter == null,
+                  onSelected: (_) =>
+                      setState(() => _selectedRoleFilter = null),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Khách hàng'),
+                  selected: _selectedRoleFilter == UserRole.customer,
+                  onSelected: (_) =>
+                      setState(() => _selectedRoleFilter = UserRole.customer),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Nhà hàng'),
+                  selected: _selectedRoleFilter == UserRole.restaurant,
+                  onSelected: (_) => setState(
+                      () => _selectedRoleFilter = UserRole.restaurant),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Shipper'),
+                  selected: _selectedRoleFilter == UserRole.shipper,
+                  onSelected: (_) =>
+                      setState(() => _selectedRoleFilter = UserRole.shipper),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Admin'),
+                  selected: _selectedRoleFilter == UserRole.admin,
+                  onSelected: (_) =>
+                      setState(() => _selectedRoleFilter = UserRole.admin),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // ── User List ──
+          Expanded(
+            child: _isLoading
+                ? const LoadingWidget(
+                    message: 'Đang tải danh sách người dùng...')
+                : filteredUsers.isEmpty
+                    ? const EmptyStateWidget(
+                        message: 'Không tìm thấy người dùng phù hợp',
+                        icon: Icons.people_outline,
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadUsers,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.all(
+                              AppConstants.defaultPadding),
+                          itemCount: filteredUsers.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final user = filteredUsers[index];
+                            final isPending = !user.isActive &&
+                                (user.role == UserRole.restaurant ||
+                                    user.role == UserRole.shipper);
+                            final roleColor = _roleColor(user.role);
 
                       return Card(
                         elevation: 1,
@@ -245,6 +346,9 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
                     },
                   ),
                 ),
+          ),
+        ],
+      ),
     );
   }
 

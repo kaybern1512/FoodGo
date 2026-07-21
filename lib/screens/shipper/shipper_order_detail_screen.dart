@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:foodgo/core/constants/app_constants.dart';
 import 'package:foodgo/core/enums/order_status.dart';
 import 'package:foodgo/core/enums/payment_enum.dart';
@@ -12,6 +13,21 @@ import 'package:foodgo/widgets/order_status_chip.dart';
 
 class ShipperOrderDetailScreen extends StatelessWidget {
   const ShipperOrderDetailScreen({super.key});
+
+  Future<void> _makePhoneCall(String phone) async {
+    final Uri url = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    }
+  }
+
+  Future<void> _openGoogleMaps(String address) async {
+    final Uri url = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,10 +75,46 @@ class ShipperOrderDetailScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     _InfoRow(label: 'Người nhận', value: order.customerName),
-                    _InfoRow(label: 'Điện thoại', value: order.customerPhone),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _InfoRow(
+                              label: 'Điện thoại', value: order.customerPhone),
+                        ),
+                        if (order.customerPhone.isNotEmpty)
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.phone,
+                                size: 14, color: Colors.white),
+                            label: const Text('Gọi', style: TextStyle(fontSize: 12)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              minimumSize: const Size(0, 28),
+                            ),
+                            onPressed: () => _makePhoneCall(order.customerPhone),
+                          ),
+                      ],
+                    ),
                     _InfoRow(label: 'Địa chỉ', value: order.deliveryAddress),
-                    if (order.note.isNotEmpty)
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.map_outlined, color: Colors.blue),
+                        label: const Text('Mở Google Maps chỉ đường',
+                            style: TextStyle(color: Colors.blue)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.blue),
+                        ),
+                        onPressed: () => _openGoogleMaps(order.deliveryAddress),
+                      ),
+                    ),
+                    if (order.note.isNotEmpty) ...[
+                      const SizedBox(height: 8),
                       _InfoRow(label: 'Ghi chú', value: order.note),
+                    ],
                   ],
                 ),
               ),

@@ -80,7 +80,7 @@ class ProductDetailScreen extends StatelessWidget {
                           Chip(
                             label: Text(product.category),
                             backgroundColor:
-                                AppColors.primary.withOpacity(0.1),
+                                AppColors.primary.withValues(alpha: 0.1),
                             labelStyle:
                                 const TextStyle(color: AppColors.primary),
                           ),

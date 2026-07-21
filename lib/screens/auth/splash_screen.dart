@@ -36,6 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final user = authProvider.currentUser!;
     if (!user.isActive) {
       await authProvider.signOut();
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
       return;
     }

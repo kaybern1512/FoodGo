@@ -10,6 +10,8 @@ class AppUser {
   final String avatarUrl;
   final UserRole role;
   final bool isActive;
+  final String vehiclePlate;
+  final bool isOnline;
   final DateTime createdAt;
 
   const AppUser({
@@ -21,6 +23,8 @@ class AppUser {
     required this.avatarUrl,
     required this.role,
     required this.isActive,
+    this.vehiclePlate = '',
+    this.isOnline = false,
     required this.createdAt,
   });
 
@@ -53,6 +57,8 @@ class AppUser {
       avatarUrl: map['avatarUrl']?.toString() ?? '',
       role: userRoleFromString(map['role']?.toString() ?? 'customer'),
       isActive: parseBool(map['isActive'], defaultValue: true),
+      vehiclePlate: map['vehiclePlate']?.toString() ?? '',
+      isOnline: parseBool(map['isOnline'], defaultValue: false),
       createdAt: parseDateTime(map['createdAt']),
     );
   }
@@ -66,6 +72,8 @@ class AppUser {
       'avatarUrl': avatarUrl,
       'role': role.toFirestoreString(),
       'isActive': isActive,
+      'vehiclePlate': vehiclePlate,
+      'isOnline': isOnline,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -79,6 +87,8 @@ class AppUser {
     String? avatarUrl,
     UserRole? role,
     bool? isActive,
+    String? vehiclePlate,
+    bool? isOnline,
     DateTime? createdAt,
   }) {
     return AppUser(
@@ -90,6 +100,8 @@ class AppUser {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       role: role ?? this.role,
       isActive: isActive ?? this.isActive,
+      vehiclePlate: vehiclePlate ?? this.vehiclePlate,
+      isOnline: isOnline ?? this.isOnline,
       createdAt: createdAt ?? this.createdAt,
     );
   }

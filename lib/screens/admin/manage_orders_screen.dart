@@ -9,6 +9,8 @@ import 'package:foodgo/widgets/empty_state_widget.dart';
 import 'package:foodgo/widgets/loading_widget.dart';
 import 'package:foodgo/widgets/order_status_chip.dart';
 
+import 'package:foodgo/core/enums/order_status.dart';
+
 class ManageOrdersScreen extends StatefulWidget {
   const ManageOrdersScreen({super.key});
 
@@ -17,6 +19,8 @@ class ManageOrdersScreen extends StatefulWidget {
 }
 
 class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
+  OrderStatus? _selectedStatusFilter;
+
   @override
   void initState() {
     super.initState();
@@ -135,9 +139,15 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
   Widget build(BuildContext context) {
     final orderProvider = context.watch<OrderProvider>();
 
+    final filteredOrders = orderProvider.orders.where((o) {
+      if (_selectedStatusFilter == null) return true;
+      return o.orderStatus == _selectedStatusFilter;
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Đơn hàng (${orderProvider.orders.length})'),
+        title: Text(
+            'Đơn hàng (${filteredOrders.length}/${orderProvider.orders.length})'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -145,18 +155,74 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
           ),
         ],
       ),
-      body: orderProvider.isLoading
-          ? const LoadingWidget()
-          : orderProvider.orders.isEmpty
-              ? const EmptyStateWidget(
-                  message: 'Chưa có đơn hàng nào',
-                  icon: Icons.receipt_long_outlined,
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                  itemCount: orderProvider.orders.length,
-                  itemBuilder: (context, index) {
-                    final order = orderProvider.orders[index];
+      body: Column(
+        children: [
+          // Filter chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.defaultPadding, vertical: 8),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('Tất cả'),
+                  selected: _selectedStatusFilter == null,
+                  onSelected: (_) =>
+                      setState(() => _selectedStatusFilter = null),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Chờ xác nhận'),
+                  selected: _selectedStatusFilter == OrderStatus.pending,
+                  onSelected: (_) => setState(
+                      () => _selectedStatusFilter = OrderStatus.pending),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Chờ shipper'),
+                  selected:
+                      _selectedStatusFilter == OrderStatus.waitingForShipper,
+                  onSelected: (_) => setState(() => _selectedStatusFilter =
+                      OrderStatus.waitingForShipper),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Đang giao'),
+                  selected: _selectedStatusFilter == OrderStatus.delivering,
+                  onSelected: (_) => setState(
+                      () => _selectedStatusFilter = OrderStatus.delivering),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Hoàn thành'),
+                  selected: _selectedStatusFilter == OrderStatus.completed,
+                  onSelected: (_) => setState(
+                      () => _selectedStatusFilter = OrderStatus.completed),
+                ),
+                const SizedBox(width: 6),
+                FilterChip(
+                  label: const Text('Đã hủy'),
+                  selected: _selectedStatusFilter == OrderStatus.cancelled,
+                  onSelected: (_) => setState(
+                      () => _selectedStatusFilter = OrderStatus.cancelled),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: orderProvider.isLoading
+                ? const LoadingWidget()
+                : filteredOrders.isEmpty
+                    ? const EmptyStateWidget(
+                        message: 'Không có đơn hàng nào phù hợp',
+                        icon: Icons.receipt_long_outlined,
+                      )
+                    : ListView.builder(
+                        padding:
+                            const EdgeInsets.all(AppConstants.defaultPadding),
+                        itemCount: filteredOrders.length,
+                        itemBuilder: (context, index) {
+                          final order = filteredOrders[index];
                     return Card(
                       clipBehavior: Clip.antiAlias,
                       margin: const EdgeInsets.only(bottom: 8),
@@ -205,6 +271,9 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
                     );
                   },
                 ),
+          ),
+        ],
+      ),
     );
   }
 }

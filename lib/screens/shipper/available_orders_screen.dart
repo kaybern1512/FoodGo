@@ -6,6 +6,7 @@ import 'package:foodgo/core/enums/payment_enum.dart';
 import 'package:foodgo/core/utils/app_utils.dart';
 import 'package:foodgo/providers/auth_provider.dart';
 import 'package:foodgo/providers/order_provider.dart';
+import 'package:foodgo/services/user_service.dart';
 import 'package:foodgo/widgets/confirm_dialog.dart';
 import 'package:foodgo/widgets/empty_state_widget.dart';
 import 'package:foodgo/widgets/loading_widget.dart';
@@ -47,16 +48,33 @@ class _AvailableOrdersScreenState extends State<AvailableOrdersScreen> {
           ),
         ],
       ),
-      body: orderProvider.isLoading
-          ? const LoadingWidget(message: 'Đang tìm đơn hàng...')
-          : waitingOrders.isEmpty
-              ? EmptyStateWidget(
-                  message: 'Không có đơn hàng nào đang chờ shipper',
-                  icon: Icons.local_shipping_outlined,
-                  actionLabel: 'Làm mới',
-                  onAction: () => orderProvider.loadWaitingOrders(),
-                )
-              : RefreshIndicator(
+      body: user != null && !user.isOnline
+          ? EmptyStateWidget(
+              message:
+                  'Bạn đang TẮT nhận đơn (Offline).\nHãy bật nhận đơn trong Hồ sơ tài xế để nhận đơn mới!',
+              icon: Icons.sensors_off,
+              actionLabel: 'Bật nhận đơn ngay',
+              onAction: () async {
+                final userService = UserService();
+                await userService.setOnlineStatus(user.id, true);
+                if (context.mounted) {
+                  context
+                      .read<AuthProvider>()
+                      .updateCurrentUser(user.copyWith(isOnline: true));
+                  orderProvider.loadWaitingOrders();
+                }
+              },
+            )
+          : orderProvider.isLoading
+              ? const LoadingWidget(message: 'Đang tìm đơn hàng...')
+              : waitingOrders.isEmpty
+                  ? EmptyStateWidget(
+                      message: 'Không có đơn hàng nào đang chờ shipper',
+                      icon: Icons.local_shipping_outlined,
+                      actionLabel: 'Làm mới',
+                      onAction: () => orderProvider.loadWaitingOrders(),
+                    )
+                  : RefreshIndicator(
                   onRefresh: () => orderProvider.loadWaitingOrders(),
                   child: ListView.builder(
                     padding:

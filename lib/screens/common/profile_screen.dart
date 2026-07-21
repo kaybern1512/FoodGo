@@ -126,7 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 16),
               CircleAvatar(
                 radius: 48,
-                backgroundColor: AppColors.primary.withOpacity(0.1),
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 child: user.avatarUrl.isNotEmpty
                     ? ClipOval(
                         child: Image.network(

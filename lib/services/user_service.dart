@@ -61,6 +61,24 @@ class UserService {
     }
   }
 
+  /// Cập nhật trạng thái Online/Offline (dành cho Shipper)
+  Future<void> setOnlineStatus(String userId, bool isOnline) async {
+    try {
+      await _usersRef.doc(userId).update({'isOnline': isOnline});
+    } catch (e) {
+      throw Exception('Không thể cập nhật trạng thái: $e');
+    }
+  }
+
+  /// Cập nhật biển số xe (dành cho Shipper)
+  Future<void> updateVehiclePlate(String userId, String plate) async {
+    try {
+      await _usersRef.doc(userId).update({'vehiclePlate': plate});
+    } catch (e) {
+      throw Exception('Không thể cập nhật biển số xe: $e');
+    }
+  }
+
   /// Stream để lắng nghe thay đổi thông tin người dùng
   Stream<AppUser?> userStream(String userId) {
     return _usersRef.doc(userId).snapshots().map((doc) {

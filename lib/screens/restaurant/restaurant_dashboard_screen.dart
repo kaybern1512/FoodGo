@@ -54,12 +54,12 @@ class _RestaurantDashboardScreenState
             backgroundColor: AppColors.success,
           ),
         );
+        final restaurantProvider = context.read<RestaurantProvider>();
+        final productProvider = context.read<ProductProvider>();
         await _loadData();
-        final restaurant = context.read<RestaurantProvider>().myRestaurant;
+        final restaurant = restaurantProvider.myRestaurant;
         if (restaurant != null && mounted) {
-          await context
-              .read<ProductProvider>()
-              .loadProductsByRestaurant(restaurant.id);
+          await productProvider.loadProductsByRestaurant(restaurant.id);
         }
       }
     } catch (e) {
@@ -142,7 +142,7 @@ class _RestaurantDashboardScreenState
             value: restaurant.isOpen,
             onChanged: (value) => restaurantProvider.toggleOpenStatus(
                 restaurant.id, value),
-            activeColor: Colors.white,
+            activeThumbColor: Colors.white,
           ),
         ],
       ),

@@ -165,27 +165,51 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         .pushNamed(AppRoutes.manageProducts),
                   ),
                   _StatCard(
-                    label: 'Đơn hàng',
+                    label: 'Tất cả đơn hàng',
                     value: '${orderProvider.orders.length}',
                     icon: Icons.receipt_long,
                     color: Colors.teal,
+                  ),
+                  _StatCard(
+                    label: 'Đơn chờ shipper',
+                    value:
+                        '${orderProvider.orders.where((o) => o.orderStatus == OrderStatus.waitingForShipper).length}',
+                    icon: Icons.access_time_filled,
+                    color: Colors.amber.shade800,
+                  ),
+                  _StatCard(
+                    label: 'Đơn đang giao',
+                    value:
+                        '${orderProvider.orders.where((o) => o.orderStatus == OrderStatus.delivering).length}',
+                    icon: Icons.directions_bike,
+                    color: Colors.indigo,
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.cardRadius),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(AppConstants.defaultPadding),
                   child: Row(
                     children: [
-                      const Icon(Icons.attach_money,
-                          color: AppColors.primary, size: 32),
-                      const SizedBox(width: 12),
+                      const CircleAvatar(
+                        radius: 26,
+                        backgroundColor: Color(0xFFFFF3E0),
+                        child: Icon(Icons.monetization_on,
+                            color: AppColors.primary, size: 30),
+                      ),
+                      const SizedBox(width: 14),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Tổng doanh thu',
-                              style: TextStyle(color: AppColors.textSecondary)),
+                          const Text('Tổng doanh thu đã hoàn thành',
+                              style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13)),
                           Text(
                             AppUtils.formatCurrency(completedRevenue),
                             style: const TextStyle(

@@ -49,7 +49,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               background: _restaurant!.imageUrl.isNotEmpty
                   ? Image.network(_restaurant!.imageUrl, fit: BoxFit.cover)
                   : Container(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       child: const Icon(Icons.restaurant,
                           size: 80, color: Colors.white),
                     ),

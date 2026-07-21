@@ -65,7 +65,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         .toList();
 
     final subtotal = cartProvider.subtotal;
-    final shippingFee = AppConstants.shippingFee;
+    const shippingFee = AppConstants.shippingFee;
     final totalAmount = subtotal + shippingFee;
 
     // Xác định trạng thái thanh toán dựa trên phương thức
@@ -124,7 +124,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final orderProvider = context.watch<OrderProvider>();
 
     final subtotal = cartProvider.subtotal;
-    final shippingFee = AppConstants.shippingFee;
+    const shippingFee = AppConstants.shippingFee;
     final total = subtotal + shippingFee;
 
     return Scaffold(
@@ -271,7 +271,7 @@ class _PaymentOption extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: value == groupValue
-          ? AppColors.primary.withOpacity(0.05)
+          ? AppColors.primary.withValues(alpha: 0.05)
           : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
@@ -281,7 +281,9 @@ class _PaymentOption extends StatelessWidget {
       ),
       child: RadioListTile<PaymentMethod>(
         value: value,
+        // ignore: deprecated_member_use
         groupValue: groupValue,
+        // ignore: deprecated_member_use
         onChanged: onChanged,
         activeColor: AppColors.primary,
         title: Row(

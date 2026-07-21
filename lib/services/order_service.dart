@@ -156,4 +156,41 @@ class OrderService {
       throw Exception('Không thể nhận đơn hàng: $e');
     }
   }
+
+  /// Lấy đơn hàng shipper trong khoảng thời gian (cho thống kê thu nhập)
+  Future<List<FoodOrder>> getShipperOrdersByDateRange(
+      String shipperId, DateTime from, DateTime to) async {
+    try {
+      final snapshot = await _ordersRef
+          .where('shipperId', isEqualTo: shipperId)
+          .where('orderStatus',
+              isEqualTo: OrderStatus.completed.toFirestoreString())
+          .where('createdAt',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(from))
+          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(to))
+          .orderBy('createdAt', descending: true)
+          .get();
+      return snapshot.docs
+          .map((doc) =>
+              FoodOrder.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+    } catch (e) {
+      throw Exception('Không thể lấy thống kê đơn hàng: $e');
+    }
+  }
+
+  /// Lấy tên nhà hàng theo restaurantId
+  Future<String> getRestaurantNameById(String restaurantId) async {
+    try {
+      final doc = await _firestore
+          .collection(FirestoreCollections.restaurants)
+          .doc(restaurantId)
+          .get();
+      if (!doc.exists) return 'Nhà hàng';
+      final data = doc.data() as Map<String, dynamic>;
+      return data['name']?.toString() ?? 'Nhà hàng';
+    } catch (e) {
+      return 'Nhà hàng';
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:foodgo/core/constants/app_constants.dart';
 import 'package:foodgo/core/enums/order_status.dart';
 import 'package:foodgo/core/enums/payment_enum.dart';
@@ -20,6 +21,21 @@ class CurrentDeliveryScreen extends StatefulWidget {
 }
 
 class _CurrentDeliveryScreenState extends State<CurrentDeliveryScreen> {
+  Future<void> _makePhoneCall(String phone) async {
+    final Uri url = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    }
+  }
+
+  Future<void> _openGoogleMaps(String address) async {
+    final Uri url = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -168,6 +184,25 @@ class _CurrentDeliveryScreenState extends State<CurrentDeliveryScreen> {
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 10),
+                              // Nút Mở Google Maps chỉ đường
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.map_outlined,
+                                      color: Colors.blue),
+                                  label: const Text('Mở Google Maps chỉ đường',
+                                      style: TextStyle(color: Colors.blue)),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.blue),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  onPressed: () => _openGoogleMaps(
+                                      currentOrder.deliveryAddress),
+                                ),
+                              ),
                               const Divider(height: 20),
                               // Người nhận
                               _InfoRow(
@@ -175,11 +210,33 @@ class _CurrentDeliveryScreenState extends State<CurrentDeliveryScreen> {
                                   label: 'Người nhận',
                                   value: currentOrder.customerName),
                               const SizedBox(height: 8),
-                              // SĐT
-                              _InfoRow(
-                                  icon: Icons.phone_outlined,
-                                  label: 'Điện thoại',
-                                  value: currentOrder.customerPhone),
+                              // SĐT + Nút Gọi Nhanh
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _InfoRow(
+                                        icon: Icons.phone_outlined,
+                                        label: 'Điện thoại',
+                                        value: currentOrder.customerPhone),
+                                  ),
+                                  if (currentOrder.customerPhone.isNotEmpty)
+                                    ElevatedButton.icon(
+                                      icon: const Icon(Icons.phone,
+                                          size: 16, color: Colors.white),
+                                      label: const Text('Gọi ngay',
+                                          style: TextStyle(fontSize: 12)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.success,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 6),
+                                        minimumSize: const Size(0, 32),
+                                      ),
+                                      onPressed: () => _makePhoneCall(
+                                          currentOrder.customerPhone),
+                                    ),
+                                ],
+                              ),
                               if (currentOrder.note.isNotEmpty) ...[
                                 const SizedBox(height: 8),
                                 _InfoRow(

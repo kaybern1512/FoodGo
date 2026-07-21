@@ -53,6 +53,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isSaving = true);
     try {
       final restaurantProvider = context.read<RestaurantProvider>();
+      final productProvider = context.read<ProductProvider>();
       final restaurant = restaurantProvider.myRestaurant!;
 
       String imageUrl = _imageUrlController.text.trim();
@@ -78,8 +79,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         createdAt: DateTime.now(),
       );
 
-      final success =
-          await context.read<ProductProvider>().createProduct(product);
+      final success = await productProvider.createProduct(product);
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
