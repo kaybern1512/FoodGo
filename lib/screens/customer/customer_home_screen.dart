@@ -12,6 +12,7 @@ import 'package:foodgo/widgets/loading_widget.dart';
 import 'package:foodgo/widgets/product_card.dart';
 import 'package:foodgo/widgets/restaurant_card.dart';
 
+/// Màn hình chính Khách hàng - Tìm kiếm nhà hàng & sản phẩm.
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
 
@@ -24,11 +25,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   final TextEditingController _searchController = TextEditingController();
   late TabController _tabController;
   String _searchQuery = '';
+  final List<String> _searchHistory = ['Trà sữa', 'Cơm tấm', 'Bún bò', 'Burger'];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Tải danh sách nhà hàng đang mở sau khi build xong frame đầu tiên
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<RestaurantProvider>().loadOpenRestaurants();
     });
@@ -41,14 +44,25 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     super.dispose();
   }
 
+  /// Lọc danh sách nhà hàng theo từ khóa tìm kiếm
   List<Restaurant> _filterRestaurants(List<Restaurant> restaurants) {
     if (_searchQuery.isEmpty) return restaurants;
     final query = _searchQuery.toLowerCase();
     return restaurants
         .where((r) =>
-            r.name.toLowerCase().contains(query) ||
-            r.address.toLowerCase().contains(query))
+    r.name.toLowerCase().contains(query) ||
+        r.address.toLowerCase().contains(query))
         .toList();
+  }
+
+  /// Lưu lịch sử tìm kiếm khi submit
+  void _onSearchSubmitted(String query) {
+    if (query.isNotEmpty && !_searchHistory.contains(query)) {
+      setState(() {
+        _searchHistory.insert(0, query);
+        if (_searchHistory.length > 5) _searchHistory.removeLast();
+      });
+    }
   }
 
   @override
@@ -59,19 +73,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     final cartProvider = context.watch<CartProvider>();
 
     final filteredRestaurants =
-        _filterRestaurants(restaurantProvider.restaurants);
+    _filterRestaurants(restaurantProvider.restaurants);
 
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('FoodGo',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('FoodGo', style: TextStyle(fontWeight: FontWeight.bold)),
             Text(
               'Xin chào, ${user?.fullName ?? ''}',
-              style:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
         ),
@@ -99,7 +111,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
       ),
       body: Column(
         children: [
-          // Thanh tìm kiếm
+          // --- THANH TÌM KIẾM ---
           Padding(
             padding: const EdgeInsets.all(AppConstants.defaultPadding),
             child: TextField(
@@ -111,13 +123,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                          productProvider.clearSearchResults();
-                        },
-                      )
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                    productProvider.clearSearchResults();
+                  },
+                )
                     : null,
               ),
               onChanged: (value) {
@@ -126,124 +138,173 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                   productProvider.searchProducts(value);
                 }
               },
+              onSubmitted: _onSearchSubmitted,
             ),
           ),
+
+          // --- LỊCH SỬ TÌM KIẾM NHANH (QUICK CHIPS) ---
+          if (_searchQuery.isEmpty && _searchHistory.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.defaultPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Tìm kiếm gần đây:',
+                          style: TextStyle(
+                              fontSize: 12, color: AppColors.textSecondary)),
+                      InkWell(
+                        onTap: () => setState(() => _searchHistory.clear()),
+                        child: const Text('Xóa',
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.primary)),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _searchHistory.map((query) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ActionChip(
+                            label: Text(query,
+                                style: const TextStyle(fontSize: 11)),
+                            onPressed: () {
+                              _searchController.text = query;
+                              setState(() => _searchQuery = query);
+                              if (_tabController.index == 1) {
+                                productProvider.searchProducts(query);
+                              }
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+
+          // --- NỘI DUNG THEO TAB ---
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Tab Cửa hàng
+                // TAB 1: Danh sách Nhà hàng
                 restaurantProvider.isLoading
                     ? const LoadingWidget(message: 'Đang tải nhà hàng...')
                     : filteredRestaurants.isEmpty
-                        ? EmptyStateWidget(
-                            message: _searchQuery.isEmpty
-                                ? 'Chưa có nhà hàng nào đang mở'
-                                : 'Không tìm thấy nhà hàng phù hợp',
-                            icon: Icons.restaurant_outlined,
-                            actionLabel: 'Làm mới',
-                            onAction: () => context
-                                .read<RestaurantProvider>()
-                                .loadOpenRestaurants(),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () => context
-                                .read<RestaurantProvider>()
-                                .loadOpenRestaurants(),
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: AppConstants.defaultPadding),
-                              itemCount: filteredRestaurants.length,
-                              itemBuilder: (context, index) {
-                                final restaurant = filteredRestaurants[index];
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: RestaurantCard(
-                                    restaurant: restaurant,
-                                    onTap: () =>
-                                        Navigator.of(context).pushNamed(
-                                      AppRoutes.restaurantDetail,
-                                      arguments: restaurant,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                    ? EmptyStateWidget(
+                  message: _searchQuery.isEmpty
+                      ? 'Chưa có nhà hàng nào đang mở'
+                      : 'Không tìm thấy nhà hàng phù hợp',
+                  icon: Icons.restaurant_outlined,
+                  actionLabel: 'Làm mới',
+                  onAction: () => context
+                      .read<RestaurantProvider>()
+                      .loadOpenRestaurants(),
+                )
+                    : RefreshIndicator(
+                  onRefresh: () => context
+                      .read<RestaurantProvider>()
+                      .loadOpenRestaurants(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.defaultPadding),
+                    itemCount: filteredRestaurants.length,
+                    itemBuilder: (context, index) {
+                      final restaurant = filteredRestaurants[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: RestaurantCard(
+                          restaurant: restaurant,
+                          onTap: () =>
+                              Navigator.of(context).pushNamed(
+                                AppRoutes.restaurantDetail,
+                                arguments: restaurant,
+                              ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
 
-                // Tab Tìm món ăn theo tên
+                // TAB 2: Tìm kiếm Món ăn
                 productProvider.isLoading
                     ? const LoadingWidget(message: 'Đang tìm món ăn...')
                     : _searchQuery.isEmpty
-                        ? const EmptyStateWidget(
-                            message: 'Nhập tên món ăn ở ô tìm kiếm phía trên',
-                            icon: Icons.search,
-                          )
-                        : productProvider.searchResults.isEmpty
-                            ? EmptyStateWidget(
-                                message:
-                                    'Không tìm thấy món "$_searchQuery"',
-                                icon: Icons.fastfood_outlined,
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: AppConstants.defaultPadding),
-                                itemCount:
-                                    productProvider.searchResults.length,
-                                itemBuilder: (context, index) {
-                                  final product =
-                                      productProvider.searchResults[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 8),
-                                    child: ProductCard(
-                                      product: product,
-                                      onTap: () =>
-                                          Navigator.of(context).pushNamed(
-                                        AppRoutes.productDetail,
-                                        arguments: product,
-                                      ),
-                                      onAddToCart: product.isAvailable
-                                          ? () {
-                                              final restaurantName =
-                                                  restaurantProvider
-                                                          .restaurants
-                                                          .where((r) =>
-                                                              r.id ==
-                                                              product
-                                                                  .restaurantId)
-                                                          .map((r) => r.name)
-                                                          .firstOrNull ??
-                                                      'Nhà hàng';
-                                              final added = cartProvider
-                                                  .addItem(product,
-                                                      restaurantName);
-                                              if (!added) {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                        'Giỏ hàng chỉ chứa sản phẩm từ một nhà hàng'),
-                                                    backgroundColor:
-                                                        AppColors.error,
-                                                  ),
-                                                );
-                                              } else {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                        'Đã thêm vào giỏ hàng'),
-                                                    backgroundColor:
-                                                        AppColors.success,
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          : null,
-                                    ),
-                                  );
-                                },
+                    ? const EmptyStateWidget(
+                  message: 'Nhập tên món ăn ở ô tìm kiếm phía trên',
+                  icon: Icons.search,
+                )
+                    : productProvider.searchResults.isEmpty
+                    ? EmptyStateWidget(
+                  message: 'Không tìm thấy món "$_searchQuery"',
+                  icon: Icons.fastfood_outlined,
+                )
+                    : ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.defaultPadding),
+                  itemCount:
+                  productProvider.searchResults.length,
+                  itemBuilder: (context, index) {
+                    final product =
+                    productProvider.searchResults[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ProductCard(
+                        product: product,
+                        onTap: () =>
+                            Navigator.of(context).pushNamed(
+                              AppRoutes.productDetail,
+                              arguments: product,
+                            ),
+                        onAddToCart: product.isAvailable
+                            ? () {
+                          final restaurantName =
+                              restaurantProvider.restaurants
+                                  .where((r) =>
+                              r.id ==
+                                  product
+                                      .restaurantId)
+                                  .map((r) => r.name)
+                                  .firstOrNull ??
+                                  'Nhà hàng';
+                          final added = cartProvider.addItem(
+                              product, restaurantName);
+                          if (!added) {
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Giỏ hàng chỉ chứa sản phẩm từ một nhà hàng'),
+                                backgroundColor:
+                                AppColors.error,
                               ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Đã thêm vào giỏ hàng'),
+                                backgroundColor:
+                                AppColors.success,
+                              ),
+                            );
+                          }
+                        }
+                            : null,
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
