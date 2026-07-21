@@ -1,5 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:foodgo/screens/customer/customer_orders_screen.dart';
+import 'package:foodgo/screens/restaurant/edit_product_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -47,10 +49,19 @@ import 'package:foodgo/screens/common/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Khởi tạo định dạng ngày tháng tiếng Việt
   await initializeDateFormatting('vi_VN', null);
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  // Bọc try-catch để nếu Firebase chưa config Web thì app vẫn chạy bình thường, không bị trắng màn hình
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('⚠️ Firebase initialization error (Web/Desktop): $e');
+  }
+
   runApp(const FoodGoApp());
 }
 
@@ -82,7 +93,7 @@ class FoodGoApp extends StatelessWidget {
           // Customer
           AppRoutes.customerMain: (context) => const CustomerMainScreen(),
           AppRoutes.restaurantDetail: (context) =>
-              const RestaurantDetailScreen(),
+          const RestaurantDetailScreen(),
           AppRoutes.productDetail: (context) => const ProductDetailScreen(),
           AppRoutes.cart: (context) => const CartScreen(),
           AppRoutes.checkout: (context) => const CheckoutScreen(),
@@ -95,12 +106,12 @@ class FoodGoApp extends StatelessWidget {
           AppRoutes.addProduct: (context) => const AddProductScreen(),
           AppRoutes.editProduct: (context) => const EditProductScreen(),
           AppRoutes.restaurantOrderDetail: (context) =>
-              const RestaurantOrderDetailScreen(),
+          const RestaurantOrderDetailScreen(),
 
           // Shipper
           AppRoutes.shipperMain: (context) => const ShipperMainScreen(),
           AppRoutes.shipperOrderDetail: (context) =>
-              const ShipperOrderDetailScreen(),
+          const ShipperOrderDetailScreen(),
 
           // Admin
           AppRoutes.adminMain: (context) => const AdminMainScreen(),
