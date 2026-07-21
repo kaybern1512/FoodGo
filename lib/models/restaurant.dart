@@ -11,6 +11,8 @@ class Restaurant {
   final double rating;
   final bool isApproved;
   final bool isOpen;
+  final String openTime;
+  final String closeTime;
   final DateTime createdAt;
 
   const Restaurant({
@@ -24,6 +26,8 @@ class Restaurant {
     required this.rating,
     required this.isApproved,
     required this.isOpen,
+    required this.openTime,
+    required this.closeTime,
     required this.createdAt,
   });
 
@@ -66,6 +70,8 @@ class Restaurant {
       rating: parseDouble(map['rating']),
       isApproved: parseBool(map['isApproved'], defaultValue: false),
       isOpen: parseBool(map['isOpen'], defaultValue: false),
+      openTime: map['openTime']?.toString() ?? '07:00',
+      closeTime: map['closeTime']?.toString() ?? '22:00',
       createdAt: parseDateTime(map['createdAt']),
     );
   }
@@ -81,6 +87,8 @@ class Restaurant {
       'rating': rating,
       'isApproved': isApproved,
       'isOpen': isOpen,
+      'openTime': openTime,
+      'closeTime': closeTime,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -97,6 +105,8 @@ class Restaurant {
     bool? isApproved,
     bool? isOpen,
     DateTime? createdAt,
+    String? openTime,
+    String? closeTime,
   }) {
     return Restaurant(
       id: id ?? this.id,
@@ -109,6 +119,8 @@ class Restaurant {
       rating: rating ?? this.rating,
       isApproved: isApproved ?? this.isApproved,
       isOpen: isOpen ?? this.isOpen,
+      openTime: openTime ?? this.openTime,
+      closeTime: closeTime ?? this.closeTime,
       createdAt: createdAt ?? this.createdAt,
     );
   }

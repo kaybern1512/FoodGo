@@ -49,8 +49,8 @@ class _RestaurantRevenueScreenState extends State<RestaurantRevenueScreen> {
         .where((o) => o.orderStatus == OrderStatus.completed)
         .toList();
 
-    final totalRevenue = completedOrders.fold<double>(
-        0, (sum, o) => sum + o.subtotal);
+    final totalRevenue =
+        completedOrders.fold<double>(0, (sum, o) => sum + o.subtotal);
     final totalOrders = completedOrders.length;
 
     return Scaffold(
@@ -89,8 +89,7 @@ class _RestaurantRevenueScreenState extends State<RestaurantRevenueScreen> {
                   const SizedBox(height: 24),
                   const Text(
                     'Đơn hàng đã hoàn thành',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   ...completedOrders.map(
@@ -162,16 +161,14 @@ class _StatCard extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: color),
+                  fontSize: 18, fontWeight: FontWeight.bold, color: color),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(
-                  fontSize: 11, color: AppColors.textSecondary),
+              style:
+                  const TextStyle(fontSize: 11, color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
           ],

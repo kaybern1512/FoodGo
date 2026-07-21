@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:foodgo/core/utils/app_utils.dart';
 import 'package:foodgo/core/constants/app_constants.dart';
 import 'package:foodgo/core/enums/order_status.dart';
 import 'package:foodgo/providers/auth_provider.dart';
@@ -18,11 +20,10 @@ class RestaurantDashboardScreen extends StatefulWidget {
       _RestaurantDashboardScreenState();
 }
 
-class _RestaurantDashboardScreenState
-    extends State<RestaurantDashboardScreen> {
+class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen> {
   final SeedService _seedService = SeedService();
   bool _isSeeding = false;
-
+  String _selectedFilter = 'day';
   @override
   void initState() {
     super.initState();
@@ -83,7 +84,8 @@ class _RestaurantDashboardScreenState
     final restaurant = restaurantProvider.myRestaurant;
 
     if (restaurantProvider.isLoading || _isSeeding) {
-      return const Scaffold(body: LoadingWidget(message: 'Đang xử lý dữ liệu...'));
+      return const Scaffold(
+          body: LoadingWidget(message: 'Đang xử lý dữ liệu...'));
     }
 
     if (restaurant == null) {
@@ -133,6 +135,32 @@ class _RestaurantDashboardScreenState
     final completedOrders = orderProvider.orders
         .where((o) => o.orderStatus == OrderStatus.completed)
         .length;
+    final now = DateTime.now();
+
+    final revenueOrders = orderProvider.orders.where((o) {
+      if (o.orderStatus != OrderStatus.completed) {
+        return false;
+      }
+
+      switch (_selectedFilter) {
+        case 'day':
+          return o.createdAt.year == now.year &&
+              o.createdAt.month == now.month &&
+              o.createdAt.day == now.day;
+
+        case 'week':
+          return now.difference(o.createdAt).inDays < 7;
+
+        case 'month':
+          return o.createdAt.year == now.year && o.createdAt.month == now.month;
+
+        default:
+          return true;
+      }
+    }).toList();
+
+    final totalRevenue =
+        revenueOrders.fold<double>(0, (sum, o) => sum + o.subtotal);
 
     return Scaffold(
       appBar: AppBar(
@@ -140,8 +168,8 @@ class _RestaurantDashboardScreenState
         actions: [
           Switch(
             value: restaurant.isOpen,
-            onChanged: (value) => restaurantProvider.toggleOpenStatus(
-                restaurant.id, value),
+            onChanged: (value) =>
+                restaurantProvider.toggleOpenStatus(restaurant.id, value),
             activeColor: Colors.white,
           ),
         ],
@@ -196,7 +224,9 @@ class _RestaurantDashboardScreenState
                     children: [
                       Icon(
                         restaurant.isOpen ? Icons.store : Icons.store_outlined,
-                        color: restaurant.isOpen ? AppColors.success : AppColors.textSecondary,
+                        color: restaurant.isOpen
+                            ? AppColors.success
+                            : AppColors.textSecondary,
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -216,27 +246,163 @@ class _RestaurantDashboardScreenState
               const SizedBox(height: 24),
               const Text(
                 'Thống kê hôm nay',
-                style:
-                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              Row(
+              Column(
                 children: [
-                  Expanded(
-                    child: _StatCard(
-                      label: 'Đơn chờ',
-                      value: '$pendingOrders',
-                      icon: Icons.pending_actions,
-                      color: Colors.orange,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          label: 'Đơn chờ',
+                          value: '$pendingOrders',
+                          icon: Icons.pending_actions,
+                          color: Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          label: 'Hoàn thành',
+                          value: '$completedOrders',
+                          icon: Icons.check_circle_outline,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      label: 'Hoàn thành',
-                      value: '$completedOrders',
-                      icon: Icons.check_circle_outline,
-                      color: Colors.green,
+                  const SizedBox(height: 12),
+                  _StatCard(
+                    label: 'Doanh thu',
+                    value: AppUtils.formatCurrency(totalRevenue),
+                    icon: Icons.attach_money,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Ngày'),
+                        selected: _selectedFilter == 'day',
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedFilter = 'day';
+                          });
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Tuần'),
+                        selected: _selectedFilter == 'week',
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedFilter = 'week';
+                          });
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Tháng'),
+                        selected: _selectedFilter == 'month',
+                        onSelected: (_) {
+                          setState(() {
+                            _selectedFilter = 'month';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 220,
+                    child: BarChart(
+                      BarChartData(
+                        alignment: BarChartAlignment.spaceAround,
+                        maxY: totalRevenue > 0 ? totalRevenue * 1.2 : 100000,
+                        borderData: FlBorderData(show: false),
+                        gridData: FlGridData(show: true),
+                        titlesData: FlTitlesData(
+                          topTitles: AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 42,
+                              interval:
+                                  totalRevenue > 0 ? totalRevenue / 5 : 20000,
+                              getTitlesWidget: (value, meta) {
+                                return Text(
+                                  '${(value / 1000).toInt()}K',
+                                  style: const TextStyle(fontSize: 10),
+                                );
+                              },
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                List<String> labels;
+
+                                switch (_selectedFilter) {
+                                  case 'day':
+                                    labels = [
+                                      '0h',
+                                      '4h',
+                                      '8h',
+                                      '12h',
+                                      '16h',
+                                      '20h'
+                                    ];
+                                    break;
+
+                                  case 'week':
+                                    labels = [
+                                      'T2',
+                                      'T3',
+                                      'T4',
+                                      'T5',
+                                      'T6',
+                                      'T7',
+                                      'CN'
+                                    ];
+                                    break;
+
+                                  case 'month':
+                                    labels = [
+                                      'Tuần 1',
+                                      'Tuần 2',
+                                      'Tuần 3',
+                                      'Tuần 4'
+                                    ];
+                                    break;
+
+                                  default:
+                                    labels = [];
+                                }
+
+                                if (value.toInt() < 0 ||
+                                    value.toInt() >= labels.length) {
+                                  return const SizedBox();
+                                }
+
+                                return Text(
+                                  labels[value.toInt()],
+                                  style: const TextStyle(fontSize: 10),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        barGroups: _buildChartData(
+                          revenueOrders,
+                          _selectedFilter,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -247,6 +413,58 @@ class _RestaurantDashboardScreenState
       ),
     );
   }
+}
+
+List<BarChartGroupData> _buildChartData(
+  List<dynamic> orders,
+  String filter,
+) {
+  final values = filter == 'month'
+      ? List<double>.filled(4, 0)
+      : filter == 'day'
+          ? List<double>.filled(6, 0)
+          : List<double>.filled(7, 0);
+
+  final now = DateTime.now();
+
+  for (final order in orders) {
+    switch (filter) {
+      case 'day':
+        final slot = order.createdAt.hour ~/ 4;
+        if (slot >= 0 && slot < 6) {
+          values[slot] += order.subtotal;
+        }
+        break;
+
+      case 'week':
+        final diff = now.difference(order.createdAt).inDays;
+        if (diff >= 0 && diff < 7) {
+          values[6 - diff] += order.subtotal;
+        }
+        break;
+
+      case 'month':
+        final week = ((order.createdAt.day - 1) / 7).floor();
+        if (week >= 0 && week < 4) {
+          values[week] += order.subtotal;
+        }
+        break;
+    }
+  }
+
+  return List.generate(
+    values.length,
+    (index) => BarChartGroupData(
+      x: index,
+      barRods: [
+        BarChartRodData(
+          toY: values[index],
+          width: 18,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ],
+    ),
+  );
 }
 
 class _StatCard extends StatelessWidget {
@@ -274,9 +492,7 @@ class _StatCard extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: color),
+                  fontSize: 28, fontWeight: FontWeight.bold, color: color),
             ),
             Text(
               label,

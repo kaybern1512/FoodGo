@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:foodgo/providers/restaurant_provider.dart';
 import 'package:foodgo/core/constants/app_constants.dart';
 import 'package:foodgo/core/enums/payment_enum.dart';
 import 'package:foodgo/core/routes/app_routes.dart';
@@ -12,6 +13,7 @@ import 'package:foodgo/providers/cart_provider.dart';
 import 'package:foodgo/providers/order_provider.dart';
 import 'package:foodgo/widgets/custom_button.dart';
 import 'package:foodgo/widgets/custom_text_field.dart';
+import 'package:foodgo/core/utils/restaurant_time_utils.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -51,7 +53,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final authProvider = context.read<AuthProvider>();
     final cartProvider = context.read<CartProvider>();
     final orderProvider = context.read<OrderProvider>();
+    final restaurantProvider = context.read<RestaurantProvider>();
     final user = authProvider.currentUser!;
+
+    final restaurant = restaurantProvider.restaurants
+        .where((r) => r.id == cartProvider.restaurantId)
+        .firstOrNull;
+
+    if (restaurant == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không tìm thấy thông tin nhà hàng'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!RestaurantTimeUtils.isRestaurantOpen(
+      restaurant.openTime,
+      restaurant.closeTime,
+    )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Nhà hàng hiện chỉ phục vụ từ '
+            '${restaurant.openTime} đến ${restaurant.closeTime}.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     final orderItems = cartProvider.items
         .map((cartItem) => OrderItem(
@@ -142,8 +175,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     // Thông tin giao hàng
                     const Text(
                       'Thông tin giao hàng',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     CustomTextField(
@@ -173,8 +206,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     // Phương thức thanh toán
                     const Text(
                       'Phương thức thanh toán',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     _PaymentOption(
@@ -182,23 +215,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       groupValue: _selectedPayment,
                       label: 'Tiền mặt khi nhận hàng',
                       icon: Icons.money,
-                      onChanged: (v) =>
-                          setState(() => _selectedPayment = v!),
+                      onChanged: (v) => setState(() => _selectedPayment = v!),
                     ),
                     _PaymentOption(
                       value: PaymentMethod.mockWallet,
                       groupValue: _selectedPayment,
                       label: 'Ví điện tử (mô phỏng)',
                       icon: Icons.account_balance_wallet_outlined,
-                      onChanged: (v) =>
-                          setState(() => _selectedPayment = v!),
+                      onChanged: (v) => setState(() => _selectedPayment = v!),
                     ),
                     const Divider(height: 32),
                     // Tóm tắt đơn hàng
                     const Text(
                       'Tóm tắt đơn hàng',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     ...cartProvider.items.map(

@@ -114,7 +114,8 @@ class RestaurantProvider extends ChangeNotifier {
       await _restaurantService.setApprovalStatus(restaurantId, isApproved);
       final index = _restaurants.indexWhere((r) => r.id == restaurantId);
       if (index != -1) {
-        _restaurants[index] = _restaurants[index].copyWith(isApproved: isApproved);
+        _restaurants[index] =
+            _restaurants[index].copyWith(isApproved: isApproved);
         notifyListeners();
       }
       return true;

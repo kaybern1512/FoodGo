@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:foodgo/core/enums/order_status.dart';
 import 'package:foodgo/models/food_order.dart';
@@ -5,6 +6,8 @@ import 'package:foodgo/services/order_service.dart';
 
 class OrderProvider extends ChangeNotifier {
   final OrderService _orderService = OrderService();
+
+  StreamSubscription<List<FoodOrder>>? _restaurantSubscription;
 
   List<FoodOrder> _orders = [];
   FoodOrder? _selectedOrder;
@@ -57,6 +60,22 @@ class OrderProvider extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Lắng nghe đơn hàng nhà hàng theo thời gian thực
+  void listenRestaurantOrders(String restaurantId) {
+    _restaurantSubscription?.cancel();
+
+    _restaurantSubscription =
+        _orderService.streamRestaurantOrders(restaurantId).listen(
+      (orders) {
+        _orders = orders;
+        notifyListeners();
+      },
+      onError: (e) {
+        _setError(e.toString());
+      },
+    );
   }
 
   /// Lấy đơn hàng đang chờ shipper
@@ -118,8 +137,7 @@ class OrderProvider extends ChangeNotifier {
   }
 
   /// Cập nhật trạng thái đơn hàng
-  Future<bool> updateOrderStatus(
-      String orderId, OrderStatus newStatus) async {
+  Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
     _setLoading(true);
     _setError(null);
     try {
@@ -160,5 +178,11 @@ class OrderProvider extends ChangeNotifier {
   void setSelectedOrder(FoodOrder order) {
     _selectedOrder = order;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _restaurantSubscription?.cancel();
+    super.dispose();
   }
 }
