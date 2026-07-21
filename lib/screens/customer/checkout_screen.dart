@@ -72,6 +72,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final subtotal = cartProvider.subtotal;
     const shippingFee = AppConstants.shippingFee;
+
+    // Đảm bảo tổng tiền cuối cùng khi tạo đơn không bao giờ bị âm
     final totalAmount = cartProvider.finalTotal;
 
     // Nếu thanh toán ví điện tử mô phỏng, đánh dấu đã thanh toán
@@ -132,7 +134,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final subtotal = cartProvider.subtotal;
     const shippingFee = AppConstants.shippingFee;
-    final discount = cartProvider.discountAmount;
+    final rawDiscount = cartProvider.discountAmount;
+
+    // Giảm giá thực tế áp dụng (không được vượt quá subtotal + shippingFee)
+    final effectiveDiscount = (subtotal + shippingFee) < rawDiscount
+        ? (subtotal + shippingFee)
+        : rawDiscount;
+
     final total = cartProvider.finalTotal;
 
     return Scaffold(
@@ -226,7 +234,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const SizedBox(height: 8),
                       Chip(
                         label: Text(
-                          'Mã: ${cartProvider.voucherCode} (-${AppUtils.formatCurrency(discount)})',
+                          'Mã: ${cartProvider.voucherCode} (-${AppUtils.formatCurrency(effectiveDiscount)})',
                           style: const TextStyle(color: Colors.white),
                         ),
                         backgroundColor: AppColors.primary,
@@ -295,11 +303,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     _SummaryRow(
                         label: 'Phí giao hàng',
                         value: AppUtils.formatCurrency(shippingFee)),
-                    if (discount > 0) ...[
+                    if (effectiveDiscount > 0) ...[
                       const SizedBox(height: 4),
                       _SummaryRow(
                         label: 'Giảm giá',
-                        value: '-${AppUtils.formatCurrency(discount)}',
+                        value: '-${AppUtils.formatCurrency(effectiveDiscount)}',
                         valueColor: Colors.green,
                       ),
                     ],

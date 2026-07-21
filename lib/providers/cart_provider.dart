@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:foodgo/core/constants/app_constants.dart';
+import 'package:foodgo/models/cart_item.dart'; // Lưu ý: Chỉnh lại package: nếu có lỗi import
 import 'package:foodgo/models/cart_item.dart';
 import 'package:foodgo/models/order_item.dart';
+import 'package:foodgo/models/product.dart';
 import 'package:foodgo/models/product.dart';
 
 /// Provider quản lý giỏ hàng của người dùng.
 ///
-///Ràng buộc nghiệp vụ: Một giỏ hàng chỉ thuộc về 1 nhà hàng tại một thời điểm.
+/// Ràng buộc nghiệp vụ: Một giỏ hàng chỉ thuộc về 1 nhà hàng tại một thời điểm.
 /// Nếu người dùng thêm sản phẩm từ nhà hàng khác, hệ thống sẽ từ chối
 /// hoặc yêu cầu xóa giỏ hàng cũ.
 class CartProvider extends ChangeNotifier {
@@ -31,16 +33,17 @@ class CartProvider extends ChangeNotifier {
   double get subtotal =>
       _items.fold(0, (sum, item) => sum + item.totalPrice);
 
-  /// Tổng tiền thanh toán cuối cùng (đã tính phí ship và áp dụng voucher)
-  double get finalTotal =>
-      (subtotal + AppConstants.shippingFee - _discountAmount)
-          .clamp(0, double.infinity);
+  /// Tổng tiền thanh toán cuối cùng (chống âm tiền nếu voucher vượt quá giá trị đơn)
+  double get finalTotal {
+    final total = subtotal + AppConstants.shippingFee - _discountAmount;
+    return total < 0 ? 0 : total;
+  }
 
   /// Kiểm tra giỏ hàng có rỗng không
   bool get isEmpty => _items.isEmpty;
 
   /// Thêm sản phẩm vào giỏ.
-  /// trả về `false` nếu sản phẩm thuộc nhà hàng khác với nhà hàng hiện tại trong giỏ.
+  /// Trả về `false` nếu sản phẩm thuộc nhà hàng khác với nhà hàng hiện tại trong giỏ.
   bool addItem(Product product, String restaurantName) {
     // Ràng buộc 1 nhà hàng
     if (_restaurantId != null && _restaurantId != product.restaurantId) {
@@ -62,7 +65,7 @@ class CartProvider extends ChangeNotifier {
     return true;
   }
 
-  /// Cập nhật số lượng sản phẩm
+  /// Cập nhật số lượng sản phẩm (Tự động xóa nếu quantity <= 0)
   void updateQuantity(String productId, int quantity) {
     if (quantity <= 0) {
       removeItem(productId);
