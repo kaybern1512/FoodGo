@@ -13,6 +13,7 @@ import 'package:foodgo/providers/order_provider.dart';
 import 'package:foodgo/widgets/custom_button.dart';
 import 'package:foodgo/widgets/custom_text_field.dart';
 
+/// Màn hình xác nhận và đặt hàng (Checkout)
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -25,11 +26,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
   final _noteController = TextEditingController();
+  final _voucherController = TextEditingController();
   PaymentMethod _selectedPayment = PaymentMethod.cash;
 
   @override
   void initState() {
     super.initState();
+    // Tự động điền thông tin mặc định từ tài khoản người dùng
     final user = context.read<AuthProvider>().currentUser;
     if (user != null) {
       _addressController.text = user.address;
@@ -42,9 +45,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _addressController.dispose();
     _phoneController.dispose();
     _noteController.dispose();
+    _voucherController.dispose();
     super.dispose();
   }
 
+  /// Xử lý tạo đơn hàng
   Future<void> _placeOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -53,22 +58,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final orderProvider = context.read<OrderProvider>();
     final user = authProvider.currentUser!;
 
+    // Chuyển đổi CartItem sang OrderItem
     final orderItems = cartProvider.items
         .map((cartItem) => OrderItem(
-              productId: cartItem.product.id,
-              productName: cartItem.product.name,
-              imageUrl: cartItem.product.imageUrl,
-              price: cartItem.product.price,
-              quantity: cartItem.quantity,
-              totalPrice: cartItem.totalPrice,
-            ))
+      productId: cartItem.product.id,
+      productName: cartItem.product.name,
+      imageUrl: cartItem.product.imageUrl,
+      price: cartItem.product.price,
+      quantity: cartItem.quantity,
+      totalPrice: cartItem.totalPrice,
+    ))
         .toList();
 
     final subtotal = cartProvider.subtotal;
     const shippingFee = AppConstants.shippingFee;
-    final totalAmount = subtotal + shippingFee;
 
-    // Xác định trạng thái thanh toán dựa trên phương thức
+    // Đảm bảo tổng tiền cuối cùng khi tạo đơn không bao giờ bị âm
+    final totalAmount = cartProvider.finalTotal;
+
+    // Nếu thanh toán ví điện tử mô phỏng, đánh dấu đã thanh toán
     final paymentStatus = _selectedPayment == PaymentMethod.mockWallet
         ? PaymentStatus.paid
         : PaymentStatus.unpaid;
@@ -104,9 +112,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           backgroundColor: AppColors.success,
         ),
       );
+      // Điều hướng về màn hình chính và xóa các route cũ
       Navigator.of(context).pushNamedAndRemoveUntil(
         AppRoutes.customerMain,
-        (route) => false,
+            (route) => false,
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -125,7 +134,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     final subtotal = cartProvider.subtotal;
     const shippingFee = AppConstants.shippingFee;
-    final total = subtotal + shippingFee;
+    final rawDiscount = cartProvider.discountAmount;
+
+    // Giảm giá thực tế áp dụng (không được vượt quá subtotal + shippingFee)
+    final effectiveDiscount = (subtotal + shippingFee) < rawDiscount
+        ? (subtotal + shippingFee)
+        : rawDiscount;
+
+    final total = cartProvider.finalTotal;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Xác nhận đơn hàng')),
@@ -139,11 +155,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Thông tin giao hàng
+                    // --- THÔNG TIN GIAO HÀNG ---
                     const Text(
                       'Thông tin giao hàng',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     CustomTextField(
@@ -169,12 +185,74 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       prefixIcon: Icons.note_outlined,
                       maxLines: 2,
                     ),
+
                     const Divider(height: 32),
-                    // Phương thức thanh toán
+
+                    // --- MÃ GIẢM GIÁ / VOUCHER ---
+                    const Text(
+                      'Mã giảm giá / Voucher',
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _voucherController,
+                            decoration: const InputDecoration(
+                              hintText: 'Nhập FOODGO10 hoặc FREESHIP',
+                              prefixIcon: Icon(Icons.card_giftcard),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (_voucherController.text.isNotEmpty) {
+                              final success = cartProvider
+                                  .applyVoucher(_voucherController.text);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(success
+                                      ? 'Áp dụng mã giảm giá thành công!'
+                                      : 'Mã giảm giá không hợp lệ'),
+                                  backgroundColor: success
+                                      ? AppColors.success
+                                      : AppColors.error,
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Áp dụng'),
+                        ),
+                      ],
+                    ),
+                    if (cartProvider.voucherCode != null) ...[
+                      const SizedBox(height: 8),
+                      Chip(
+                        label: Text(
+                          'Mã: ${cartProvider.voucherCode} (-${AppUtils.formatCurrency(effectiveDiscount)})',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        backgroundColor: AppColors.primary,
+                        deleteIconColor: Colors.white,
+                        onDeleted: () {
+                          cartProvider.removeVoucher();
+                          _voucherController.clear();
+                        },
+                      ),
+                    ],
+
+                    const Divider(height: 32),
+
+                    // --- PHƯƠNG THỨC THANH TOÁN ---
                     const Text(
                       'Phương thức thanh toán',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     _PaymentOption(
@@ -182,27 +260,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       groupValue: _selectedPayment,
                       label: 'Tiền mặt khi nhận hàng',
                       icon: Icons.money,
-                      onChanged: (v) =>
-                          setState(() => _selectedPayment = v!),
+                      onChanged: (v) => setState(() => _selectedPayment = v!),
                     ),
                     _PaymentOption(
                       value: PaymentMethod.mockWallet,
                       groupValue: _selectedPayment,
                       label: 'Ví điện tử (mô phỏng)',
                       icon: Icons.account_balance_wallet_outlined,
-                      onChanged: (v) =>
-                          setState(() => _selectedPayment = v!),
+                      onChanged: (v) => setState(() => _selectedPayment = v!),
                     ),
+
                     const Divider(height: 32),
-                    // Tóm tắt đơn hàng
+
+                    // --- TÓM TẮT ĐƠN HÀNG ---
                     const Text(
                       'Tóm tắt đơn hàng',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     ...cartProvider.items.map(
-                      (item) => Padding(
+                          (item) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
                           children: [
@@ -225,6 +303,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     _SummaryRow(
                         label: 'Phí giao hàng',
                         value: AppUtils.formatCurrency(shippingFee)),
+                    if (effectiveDiscount > 0) ...[
+                      const SizedBox(height: 4),
+                      _SummaryRow(
+                        label: 'Giảm giá',
+                        value: '-${AppUtils.formatCurrency(effectiveDiscount)}',
+                        valueColor: Colors.green,
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     _SummaryRow(
                       label: 'Tổng cộng',
@@ -236,6 +322,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
             ),
+
+            // Nút Đặt hàng cố định ở dưới
             Padding(
               padding: const EdgeInsets.all(AppConstants.defaultPadding),
               child: CustomButton(
@@ -251,6 +339,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 }
 
+/// Widget tùy chọn Phương thức thanh toán
 class _PaymentOption extends StatelessWidget {
   final PaymentMethod value;
   final PaymentMethod groupValue;
@@ -281,9 +370,7 @@ class _PaymentOption extends StatelessWidget {
       ),
       child: RadioListTile<PaymentMethod>(
         value: value,
-        // ignore: deprecated_member_use
         groupValue: groupValue,
-        // ignore: deprecated_member_use
         onChanged: onChanged,
         activeColor: AppColors.primary,
         title: Row(
@@ -298,6 +385,7 @@ class _PaymentOption extends StatelessWidget {
   }
 }
 
+/// Widget dòng tổng tiền tóm tắt
 class _SummaryRow extends StatelessWidget {
   final String label;
   final String value;
