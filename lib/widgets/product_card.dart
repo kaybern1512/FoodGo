@@ -36,23 +36,53 @@ class ProductCard extends StatelessWidget {
                     )
                   : _buildPlaceholderImage(),
             ),
+
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(AppConstants.defaultPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                    // Tên món + Badge hết hàng
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            product.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (!product.isAvailable)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'Hết hàng',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
+
                     const SizedBox(height: 4),
+
+                    // Mô tả
                     Text(
                       product.description,
                       style: const TextStyle(
@@ -62,7 +92,10 @@ class ProductCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+
                     const SizedBox(height: 8),
+
+                    // Giá + nút thêm giỏ hàng
                     Row(
                       children: [
                         Text(
@@ -73,7 +106,10 @@ class ProductCard extends StatelessWidget {
                             color: AppColors.primary,
                           ),
                         ),
+
                         const Spacer(),
+
+                        // Còn hàng
                         if (onAddToCart != null && product.isAvailable)
                           GestureDetector(
                             onTap: onAddToCart,
@@ -90,12 +126,19 @@ class ProductCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                        if (!product.isAvailable)
-                          const Text(
-                            'Hết hàng',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 12,
+
+                        // Hết hàng
+                        if (onAddToCart != null && !product.isAvailable)
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.block,
+                              color: Colors.white,
+                              size: 18,
                             ),
                           ),
                       ],

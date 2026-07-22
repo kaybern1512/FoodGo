@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:foodgo/providers/restaurant_provider.dart';
 import 'package:foodgo/core/constants/app_constants.dart';
 import 'package:foodgo/core/enums/payment_enum.dart';
 import 'package:foodgo/core/routes/app_routes.dart';
@@ -11,6 +12,7 @@ import 'package:foodgo/providers/auth_provider.dart';
 import 'package:foodgo/providers/cart_provider.dart';
 import 'package:foodgo/providers/order_provider.dart';
 import 'package:foodgo/services/voucher_service.dart';
+import 'package:foodgo/core/utils/restaurant_time_utils.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -73,12 +75,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final authProvider = context.read<AuthProvider>();
     final cartProvider = context.read<CartProvider>();
     final orderProvider = context.read<OrderProvider>();
+    final restaurantProvider = context.read<RestaurantProvider>();
     final user = authProvider.currentUser!;
 
     if (cartProvider.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Giỏ hàng trống!'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final restaurant = restaurantProvider.restaurants
+        .where((r) => r.id == cartProvider.restaurantId)
+        .firstOrNull;
+
+    if (restaurant != null &&
+        !RestaurantTimeUtils.isRestaurantOpen(
+          restaurant.openTime,
+          restaurant.closeTime,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Nhà hàng hiện chỉ phục vụ từ '
+            '${restaurant.openTime} đến ${restaurant.closeTime}.',
+          ),
           backgroundColor: AppColors.error,
         ),
       );

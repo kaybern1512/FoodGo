@@ -70,6 +70,24 @@ class OrderService {
     }
   }
 
+  /// Lắng nghe đơn hàng của nhà hàng theo thời gian thực
+  Stream<List<FoodOrder>> streamRestaurantOrders(String restaurantId) {
+    return _ordersRef
+        .where('restaurantId', isEqualTo: restaurantId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) => FoodOrder.fromMap(
+                  doc.data() as Map<String, dynamic>,
+                  doc.id,
+                ),
+              )
+              .toList(),
+        );
+  }
+
   /// Lấy đơn hàng chờ shipper nhận (Sort in-memory)
   Future<List<FoodOrder>> getWaitingOrders() async {
     try {
@@ -121,8 +139,7 @@ class OrderService {
   }
 
   /// Cập nhật trạng thái đơn hàng
-  Future<void> updateOrderStatus(
-      String orderId, OrderStatus newStatus) async {
+  Future<void> updateOrderStatus(String orderId, OrderStatus newStatus) async {
     try {
       final updates = <String, dynamic>{
         'orderStatus': newStatus.toFirestoreString(),
@@ -154,7 +171,8 @@ class OrderService {
         }
         final data = orderDoc.data() as Map<String, dynamic>;
         final currentStatus = data['orderStatus'] as String?;
-        if (currentStatus != OrderStatus.waitingForShipper.toFirestoreString()) {
+        if (currentStatus !=
+            OrderStatus.waitingForShipper.toFirestoreString()) {
           throw Exception('Đơn hàng đã được nhận bởi shipper khác');
         }
         final updates = <String, dynamic>{

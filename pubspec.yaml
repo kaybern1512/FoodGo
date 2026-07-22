@@ -1,6 +1,6 @@
 name: foodgo
 description: "FoodGo - Ứng dụng đặt và giao đồ ăn"
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -20,6 +20,9 @@ dependencies:
   # State management
   provider: ^6.1.2
 
+  # Audio
+  audioplayers: ^6.0.0
+
   # UI & Utilities
   cupertino_icons: ^1.0.8
   image_picker: ^1.1.2
@@ -28,6 +31,7 @@ dependencies:
   uuid: ^4.5.1
   path: ^1.9.0
   url_launcher: ^6.2.5
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:
@@ -36,3 +40,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/audio/

@@ -9,20 +9,31 @@ import 'package:foodgo/providers/restaurant_provider.dart';
 import 'package:foodgo/widgets/empty_state_widget.dart';
 import 'package:foodgo/widgets/loading_widget.dart';
 import 'package:foodgo/widgets/order_card.dart';
+import 'package:foodgo/services/notification_service.dart';
 
 class RestaurantOrdersScreen extends StatefulWidget {
   const RestaurantOrdersScreen({super.key});
 
   @override
-  State<RestaurantOrdersScreen> createState() =>
-      _RestaurantOrdersScreenState();
+  State<RestaurantOrdersScreen> createState() => _RestaurantOrdersScreenState();
 }
 
 class _RestaurantOrdersScreenState extends State<RestaurantOrdersScreen> {
+  OrderProvider? _orderProvider;
+  final Set<String> _knownOrderIds = {};
+  bool _isInitialized = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadOrders());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _orderProvider = context.read<OrderProvider>();
+
+      _loadOrders();
+
+      _orderProvider!.addListener(_onOrdersChanged);
+    });
   }
 
   Future<void> _loadOrders() async {
@@ -34,8 +45,40 @@ class _RestaurantOrdersScreenState extends State<RestaurantOrdersScreen> {
     }
     final restaurant = restaurantProvider.myRestaurant;
     if (restaurant != null && mounted) {
-      await context.read<OrderProvider>().loadRestaurantOrders(restaurant.id);
+      _orderProvider?.listenRestaurantOrders(restaurant.id);
     }
+  }
+
+  Future<void> _onOrdersChanged() async {
+    if (!mounted || _orderProvider == null) return;
+
+    final currentOrders = _orderProvider!.orders;
+    final currentIds = currentOrders.map((order) => order.id).toSet();
+    final newOrderIds = currentIds.difference(_knownOrderIds);
+
+    final hasNewPendingOrder = currentOrders.any(
+      (order) =>
+          newOrderIds.contains(order.id) &&
+          order.orderStatus == OrderStatus.pending,
+    );
+
+    if (_isInitialized && hasNewPendingOrder) {
+      await NotificationService.playNewOrderSound();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("🔔 Có đơn hàng mới"),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+
+    _knownOrderIds.clear();
+    _knownOrderIds.addAll(currentIds);
+    _isInitialized = true;
   }
 
   @override
@@ -115,5 +158,11 @@ class _RestaurantOrdersScreenState extends State<RestaurantOrdersScreen> {
         },
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _orderProvider?.removeListener(_onOrdersChanged);
+    super.dispose();
   }
 }

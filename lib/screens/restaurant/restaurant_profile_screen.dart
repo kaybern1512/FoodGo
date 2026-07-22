@@ -38,6 +38,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
   bool _isEditing = false;
   bool _isSaving = false;
   File? _imageFile;
+  String _openTime = '07:00';
+  String _closeTime = '22:00';
 
   @override
   void initState() {
@@ -54,6 +56,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
       _descriptionController.text = restaurant.description;
       _addressController.text = restaurant.address;
       _phoneController.text = restaurant.phone;
+      _openTime = restaurant.openTime;
+      _closeTime = restaurant.closeTime;
     }
 
     if (user != null) {
@@ -78,6 +82,26 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
       setState(() => _imageFile = File(picked.path));
+    }
+  }
+
+  Future<void> _pickTime(bool isOpenTime) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (picked != null) {
+      final time =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+
+      setState(() {
+        if (isOpenTime) {
+          _openTime = time;
+        } else {
+          _closeTime = time;
+        }
+      });
     }
   }
 
@@ -109,6 +133,8 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
         'address': _addressController.text.trim(),
         'phone': _phoneController.text.trim(),
         'imageUrl': imageUrl,
+        'openTime': _openTime,
+        'closeTime': _closeTime,
       };
 
       await restaurantProvider.updateRestaurant(
@@ -278,8 +304,33 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                   readOnly: !_isEditing,
                   validator: AppUtils.validatePhone,
                 ),
-              ],
+                const SizedBox(height: 16),
 
+                Row(
+                  children: [
+                    Expanded(
+                      child: ListTile(
+                        title: const Text('Giờ mở cửa'),
+                        subtitle: Text(_openTime),
+                        leading: const Icon(Icons.schedule),
+                        trailing: _isEditing ? const Icon(Icons.edit) : null,
+                        onTap: _isEditing ? () => _pickTime(true) : null,
+                      ),
+                    ),
+                    Expanded(
+                      child: ListTile(
+                        title: const Text('Giờ đóng cửa'),
+                        subtitle: Text(_closeTime),
+                        leading: const Icon(Icons.access_time),
+                        trailing: _isEditing ? const Icon(Icons.edit) : null,
+                        onTap: _isEditing ? () => _pickTime(false) : null,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+              ],
               const Divider(height: 32),
               const Text(
                 '2. Thông tin Tài khoản Chủ nhà hàng',
@@ -314,7 +365,6 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                 readOnly: !_isEditing,
                 validator: AppUtils.validatePhone,
               ),
-
               const SizedBox(height: 32),
               if (_isEditing) ...[
                 CustomButton(
@@ -324,7 +374,6 @@ class _RestaurantProfileScreenState extends State<RestaurantProfileScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-
               CustomButton(
                 label: 'Đăng xuất',
                 onPressed: _signOut,
