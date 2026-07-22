@@ -34,7 +34,7 @@ extension OrderStatusExtension on OrderStatus {
   String toVietnamese() {
     switch (this) {
       case OrderStatus.pending:
-        return 'Chờ xác nhận';
+        return 'Chờ bên shop xác nhận';
       case OrderStatus.confirmed:
         return 'Đã xác nhận';
       case OrderStatus.preparing:

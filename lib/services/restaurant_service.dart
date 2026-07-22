@@ -47,17 +47,23 @@ class RestaurantService {
   /// Lấy tất cả nhà hàng đã được phê duyệt và đang mở (dành cho khách hàng)
   Future<List<Restaurant>> getApprovedOpenRestaurants() async {
     try {
+      // Dùng single query để tránh lỗi thiếu Composite Index của Firestore
       final snapshot = await _restaurantsRef
-          .where('isApproved', isEqualTo: true)
-          .where('isOpen', isEqualTo: true)
           .orderBy('createdAt', descending: true)
           .get();
       return snapshot.docs
           .map((doc) =>
               Restaurant.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .where((r) => r.isApproved && r.isOpen)
           .toList();
     } catch (e) {
-      throw Exception('Không thể lấy danh sách nhà hàng: $e');
+      // Fallback không orderBy nếu trường createdAt bị thiếu
+      final snapshot = await _restaurantsRef.get();
+      return snapshot.docs
+          .map((doc) =>
+              Restaurant.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .where((r) => r.isApproved && r.isOpen)
+          .toList();
     }
   }
 

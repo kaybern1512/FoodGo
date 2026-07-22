@@ -28,7 +28,7 @@ class Restaurant {
   });
 
   factory Restaurant.fromMap(Map<String, dynamic> map, String id) {
-    bool parseBool(dynamic val, {bool defaultValue = false}) {
+    bool parseBool(dynamic val, {bool defaultValue = true}) {
       if (val is bool) return val;
       if (val != null) {
         final str = val.toString().toLowerCase().trim();
@@ -64,8 +64,8 @@ class Restaurant {
       phone: map['phone']?.toString() ?? '',
       imageUrl: map['imageUrl']?.toString() ?? '',
       rating: parseDouble(map['rating']),
-      isApproved: parseBool(map['isApproved'], defaultValue: false),
-      isOpen: parseBool(map['isOpen'], defaultValue: false),
+      isApproved: parseBool(map['isApproved'], defaultValue: true),
+      isOpen: parseBool(map['isOpen'], defaultValue: true),
       createdAt: parseDateTime(map['createdAt']),
     );
   }

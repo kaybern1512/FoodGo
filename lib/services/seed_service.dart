@@ -334,6 +334,53 @@ class SeedService {
     }
   }
 
+  /// Thêm thực đơn mẫu phong phú cho một nhà hàng cụ thể
+  Future<void> seedDemoProductsForRestaurant(String restaurantId) async {
+    final products = [
+      {
+        'name': 'Cơm tấm sườn bì chả đặc biệt',
+        'description': 'Cơm tấm thơm mềm với sườn nướng mộc, bì heo giòn và chả trứng hấp',
+        'category': 'Cơm tấm',
+        'price': 55000.0,
+        'imageUrl':
+            'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop',
+      },
+      {
+        'name': 'Phở bò tái lăn đặc biệt',
+        'description': 'Phở bò xào thơm với hành lá tươi nồng đậm đà',
+        'category': 'Phở',
+        'price': 65000.0,
+        'imageUrl':
+            'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=600&auto=format&fit=crop',
+      },
+      {
+        'name': 'Bún thịt nướng chả giò',
+        'description': 'Bún tươi với thịt heo nướng, chả giò giòn rụm và nước mắm chua ngọt',
+        'category': 'Bún',
+        'price': 40000.0,
+        'imageUrl':
+            'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&auto=format&fit=crop',
+      },
+      {
+        'name': 'Bánh mì thập cẩm thịt chả',
+        'description': 'Bánh mì giòn rụm kẹp 5 loại thịt chả pate ngon béo',
+        'category': 'Bánh mì',
+        'price': 45000.0,
+        'imageUrl':
+            'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=600&auto=format&fit=crop',
+      },
+      {
+        'name': 'Trà sữa ô long sương sáo',
+        'description': 'Trà ô long thơm đậm kết hợp sương sáo thanh mát',
+        'category': 'Đồ uống',
+        'price': 35000.0,
+        'imageUrl':
+            'https://images.unsplash.com/photo-1558857563-b371033873b8?w=600&auto=format&fit=crop',
+      },
+    ];
+    await _addProducts(restaurantId, products);
+  }
+
   Future<void> _addProducts(
       String restaurantId, List<Map<String, dynamic>> items) async {
     final batch = _firestore.batch();

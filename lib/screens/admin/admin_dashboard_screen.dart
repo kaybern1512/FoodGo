@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:foodgo/core/constants/app_constants.dart';
 import 'package:foodgo/core/enums/order_status.dart';
 import 'package:foodgo/core/routes/app_routes.dart';
 import 'package:foodgo/core/utils/app_utils.dart';
+import 'package:foodgo/models/system_config.dart';
 import 'package:foodgo/providers/auth_provider.dart';
 import 'package:foodgo/providers/order_provider.dart';
 import 'package:foodgo/providers/product_provider.dart';
 import 'package:foodgo/providers/restaurant_provider.dart';
 import 'package:foodgo/services/seed_service.dart';
+import 'package:foodgo/services/system_config_service.dart';
 import 'package:foodgo/services/user_service.dart';
-import 'package:foodgo/widgets/custom_button.dart';
 import 'package:foodgo/widgets/loading_widget.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -23,9 +25,15 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final UserService _userService = UserService();
   final SeedService _seedService = SeedService();
+  final SystemConfigService _configService = SystemConfigService();
   int _totalUsers = 0;
   bool _isLoading = true;
   bool _isSeeding = false;
+  SystemConfig _currentConfig = const SystemConfig(
+    shippingFee: 20000.0,
+    commissionRate: 10.0,
+    systemMaintenance: false,
+  );
 
   @override
   void initState() {
@@ -37,8 +45,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     setState(() => _isLoading = true);
     try {
       final users = await _userService.getAllUsers();
+      final config = await _configService.getConfig();
       setState(() {
         _totalUsers = users.length;
+        _currentConfig = config;
         _isLoading = false;
       });
       if (!mounted) return;
@@ -62,7 +72,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Khởi tạo toàn bộ dữ liệu ảo (Nhà hàng, Món ăn, Đơn hàng) thành công!'),
+            content: Text(
+                'Khởi tạo toàn bộ dữ liệu ảo (Nhà hàng, Món ăn, Đơn hàng) thành công!'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -82,13 +93,192 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  /// Xuất báo cáo danh sách đơn hàng sang định dạng CSV & sao chép vào Clipboard
+  void _exportCSVReport() {
+    final orderProvider = context.read<OrderProvider>();
+    final orders = orderProvider.orders;
+
+    if (orders.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Chưa có dữ liệu đơn hàng để xuất báo cáo!'),
+            backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+        'Mã Đơn,Khách Hàng,Số Điện Thoại,Tổng Tiền,Trạng Thái,Ngày Tạo');
+
+    for (var o in orders) {
+      final code = '#${o.id.substring(0, 8).toUpperCase()}';
+      final name = o.customerName.replaceAll(',', ' ');
+      final phone = o.customerPhone;
+      final amount = o.totalAmount;
+      final status = o.orderStatus.toVietnamese();
+      final date = AppUtils.formatDateTime(o.createdAt);
+      buffer.writeln('$code,$name,$phone,$amount,$status,$date');
+    }
+
+    final csvString = buffer.toString();
+    Clipboard.setData(ClipboardData(text: csvString));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.description, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Báo cáo doanh thu CSV'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '📋 Đã tạo báo cáo thành công và sao chép vào bộ nhớ đệm (Clipboard)!',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              height: 120,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: SingleChildScrollView(
+                child: Text(
+                  csvString,
+                  style: const TextStyle(
+                      fontSize: 11, fontFamily: 'monospace'),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary),
+            icon: const Icon(Icons.copy, size: 16, color: Colors.white),
+            label: const Text('Sao chép lại',
+                style: TextStyle(color: Colors.white)),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: csvString));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('📋 Đã sao chép báo cáo CSV!'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mở modal chỉnh sửa Phí giao hàng & Tỷ lệ hoa hồng
+  void _showSystemConfigModal() {
+    final feeCtrl = TextEditingController(
+        text: _currentConfig.shippingFee.toStringAsFixed(0));
+    final rateCtrl = TextEditingController(
+        text: _currentConfig.commissionRate.toStringAsFixed(1));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.settings, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Cấu hình Hệ thống'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: feeCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Phí giao hàng (VNĐ)',
+                prefixIcon: Icon(Icons.delivery_dining),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: rateCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Tỷ lệ hoa hồng hệ thống (%)',
+                prefixIcon: Icon(Icons.percent),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary),
+            onPressed: () async {
+              final newFee = double.tryParse(feeCtrl.text.trim()) ?? 20000.0;
+              final newRate = double.tryParse(rateCtrl.text.trim()) ?? 10.0;
+
+              final updatedConfig = SystemConfig(
+                shippingFee: newFee,
+                commissionRate: newRate,
+                systemMaintenance: false,
+              );
+
+              await _configService.updateConfig(updatedConfig);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              setState(() => _currentConfig = updatedConfig);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🎉 Cập nhật cấu hình Phí ship & Hoa hồng thành công!'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            child: const Text('Lưu cấu hình',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final restaurantProvider = context.watch<RestaurantProvider>();
     final productProvider = context.watch<ProductProvider>();
     final orderProvider = context.watch<OrderProvider>();
 
-    if (_isLoading || _isSeeding) return const Scaffold(body: LoadingWidget(message: 'Đang xử lý dữ liệu...'));
+    if (_isLoading || _isSeeding) {
+      return const Scaffold(
+          body: LoadingWidget(message: 'Đang xử lý dữ liệu...'));
+    }
 
     final completedRevenue = orderProvider.orders
         .where((o) => o.orderStatus == OrderStatus.completed)
@@ -98,6 +288,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       appBar: AppBar(
         title: const Text('Quản trị FoodGo'),
         actions: [
+          IconButton(
+            tooltip: 'Xuất Báo Cáo CSV',
+            icon: const Icon(Icons.download, color: Colors.white),
+            onPressed: _exportCSVReport,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadData,
@@ -117,25 +312,101 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const Expanded(
                     child: Text(
                       'Tổng quan hệ thống',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
                   IconButton(
                     tooltip: 'Tạo dữ liệu ảo',
-                    icon: const Icon(Icons.auto_awesome, color: AppColors.primary),
+                    icon: const Icon(Icons.auto_awesome,
+                        color: AppColors.primary),
                     onPressed: _seedSystemDemoData,
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              CustomButton(
-                label: 'Tạo dữ liệu ảo toàn hệ thống',
-                icon: Icons.dataset,
-                isOutlined: true,
-                onPressed: _seedSystemDemoData,
-                isLoading: _isSeeding,
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.dataset, size: 18),
+                      label: const Text('Tạo dữ liệu ảo',
+                          style: TextStyle(fontSize: 13)),
+                      onPressed: _seedSystemDemoData,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.download,
+                          size: 18, color: Colors.white),
+                      label: const Text('Xuất CSV',
+                          style: TextStyle(
+                              color: Colors.white, fontSize: 13)),
+                      onPressed: _exportCSVReport,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // ── Cấu hình Phí Ship & Hoa hồng Banner ──
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(AppConstants.cardRadius),
+                ),
+                color: Colors.blue.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.blue,
+                        child: Icon(Icons.settings,
+                            color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Cấu hình hệ thống',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13)),
+                            Text(
+                              'Phí ship: ${AppUtils.formatCurrency(_currentConfig.shippingFee)}  •  Hoa hồng: ${_currentConfig.commissionRate.toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue.shade900),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _showSystemConfigModal,
+                        child: const Text('Đổi',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Grid Thống Kê
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -165,6 +436,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         .pushNamed(AppRoutes.manageProducts),
                   ),
                   _StatCard(
+                    label: 'Mã Giảm Giá',
+                    value: 'Voucher',
+                    icon: Icons.confirmation_number,
+                    color: Colors.pink,
+                    onTap: () => Navigator.of(context)
+                        .pushNamed(AppRoutes.manageVouchers),
+                  ),
+                  _StatCard(
                     label: 'Tất cả đơn hàng',
                     value: '${orderProvider.orders.length}',
                     icon: Icons.receipt_long,
@@ -177,20 +456,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     icon: Icons.access_time_filled,
                     color: Colors.amber.shade800,
                   ),
-                  _StatCard(
-                    label: 'Đơn đang giao',
-                    value:
-                        '${orderProvider.orders.where((o) => o.orderStatus == OrderStatus.delivering).length}',
-                    icon: Icons.directions_bike,
-                    color: Colors.indigo,
-                  ),
                 ],
               ),
               const SizedBox(height: 16),
+
+              // Card Tổng Doanh Thu
               Card(
                 elevation: 2,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.cardRadius),
+                  borderRadius:
+                      BorderRadius.circular(AppConstants.cardRadius),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(AppConstants.defaultPadding),
@@ -263,7 +538,7 @@ class _StatCard extends StatelessWidget {
               Text(
                 value,
                 style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: color),
               ),

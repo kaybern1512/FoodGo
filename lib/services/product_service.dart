@@ -18,17 +18,18 @@ class ProductService {
     }
   }
 
-  /// Lấy danh sách sản phẩm theo nhà hàng
+  /// Lấy danh sách sản phẩm theo nhà hàng (Sort in-memory để tránh lỗi thiếu Composite Index)
   Future<List<Product>> getProductsByRestaurant(String restaurantId) async {
     try {
       final snapshot = await _productsRef
           .where('restaurantId', isEqualTo: restaurantId)
-          .orderBy('createdAt', descending: false)
           .get();
-      return snapshot.docs
+      final products = snapshot.docs
           .map((doc) =>
               Product.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
+      products.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return products;
     } catch (e) {
       throw Exception('Không thể lấy danh sách sản phẩm: $e');
     }
@@ -37,12 +38,13 @@ class ProductService {
   /// Lấy tất cả sản phẩm (dành cho Admin)
   Future<List<Product>> getAllProducts() async {
     try {
-      final snapshot =
-          await _productsRef.orderBy('createdAt', descending: true).get();
-      return snapshot.docs
+      final snapshot = await _productsRef.get();
+      final products = snapshot.docs
           .map((doc) =>
               Product.fromMap(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
+      products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return products;
     } catch (e) {
       throw Exception('Không thể lấy danh sách sản phẩm: $e');
     }
@@ -79,14 +81,12 @@ class ProductService {
   /// Tìm kiếm sản phẩm theo tên
   Future<List<Product>> searchProducts(String query) async {
     try {
-      // Simple client-side search - for production use Algolia/Typesense
-      final snapshot =
-          await _productsRef.where('isAvailable', isEqualTo: true).get();
+      final snapshot = await _productsRef.get();
       final lowerQuery = query.toLowerCase();
       return snapshot.docs
           .map((doc) =>
               Product.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-          .where((p) => p.name.toLowerCase().contains(lowerQuery))
+          .where((p) => p.isAvailable && p.name.toLowerCase().contains(lowerQuery))
           .toList();
     } catch (e) {
       throw Exception('Không thể tìm kiếm sản phẩm: $e');

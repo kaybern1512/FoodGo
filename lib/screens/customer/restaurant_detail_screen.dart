@@ -155,11 +155,40 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                 final added = cartProvider.addItem(
                                     product, _restaurant!.name);
                                 if (!added) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Đổi nhà hàng?'),
                                       content: Text(
-                                          'Giỏ hàng chỉ chứa sản phẩm từ một nhà hàng. Vui lòng xóa giỏ hàng hiện tại.'),
-                                      backgroundColor: AppColors.error,
+                                          'Giỏ hàng hiện tại đang có món của nhà hàng khác. Bạn có muốn xóa giỏ cũ để thêm món từ "${_restaurant!.name}" không?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          child: const Text('Hủy'),
+                                        ),
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppColors.primary),
+                                          onPressed: () {
+                                            Navigator.pop(ctx);
+                                            cartProvider.addItem(
+                                                product, _restaurant!.name,
+                                                forceReplace: true);
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                    'Đã tạo giỏ hàng mới và thêm sản phẩm!'),
+                                                backgroundColor: AppColors.success,
+                                              ),
+                                            );
+                                          },
+                                          child: const Text(
+                                              'Xóa giỏ cũ & Thêm món mới',
+                                              style:
+                                                  TextStyle(color: Colors.white)),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 } else {

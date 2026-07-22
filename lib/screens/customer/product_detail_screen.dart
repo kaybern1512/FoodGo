@@ -117,7 +117,6 @@ class ProductDetailScreen extends StatelessWidget {
                     label: 'Thêm vào giỏ hàng',
                     icon: Icons.shopping_cart_outlined,
                     onPressed: () {
-                      // Need restaurant name - get from restaurant provider
                       final restaurantProvider =
                           context.read<RestaurantProvider>();
                       final restaurantName =
@@ -130,11 +129,37 @@ class ProductDetailScreen extends StatelessWidget {
                       final added =
                           cartProvider.addItem(product, restaurantName);
                       if (!added) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Đổi nhà hàng?'),
                             content: Text(
-                                'Giỏ hàng chỉ chứa sản phẩm từ một nhà hàng'),
-                            backgroundColor: AppColors.error,
+                                'Giỏ hàng hiện tại đang có món của nhà hàng khác. Bạn có muốn xóa giỏ cũ để thêm món từ "$restaurantName" không?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Hủy'),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary),
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  cartProvider.addItem(product, restaurantName,
+                                      forceReplace: true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'Đã tạo giỏ hàng mới và thêm sản phẩm!'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text('Xóa giỏ cũ & Thêm món mới',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
                           ),
                         );
                       } else {

@@ -42,5 +42,6 @@ class AppRoutes {
   static const String manageRestaurants = '/admin/restaurants';
   static const String manageProducts = '/admin/products';
   static const String manageOrders = '/admin/orders';
+  static const String manageVouchers = '/admin/vouchers';
   static const String adminProfile = '/admin/profile';
 }

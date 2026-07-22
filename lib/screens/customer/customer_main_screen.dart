@@ -16,6 +16,7 @@ class CustomerMainScreen extends StatefulWidget {
 class _CustomerMainScreenState extends State<CustomerMainScreen> {
   int _currentIndex = 0;
 
+  // Khởi tạo screens 1 lần duy nhất — không rebuild khi IndexedStack re-render
   final List<Widget> _screens = const [
     CustomerHomeScreen(),
     CustomerOrdersScreen(),
@@ -24,8 +25,20 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
   ];
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is int) {
+      _currentIndex = args;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final cartProvider = context.watch<CartProvider>();
+    // Chỉ watch itemCount để cập nhật badge — không rebuild toàn bộ layout
+    final itemCount = context.select<CartProvider, int>(
+      (cart) => cart.itemCount,
+    );
 
     return Scaffold(
       body: IndexedStack(
@@ -34,7 +47,12 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          if (_currentIndex != index) {
+            setState(() => _currentIndex = index);
+          }
+        },
+        type: BottomNavigationBarType.fixed,
         items: [
           const BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -48,13 +66,13 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
           ),
           BottomNavigationBarItem(
             icon: Badge(
-              isLabelVisible: cartProvider.itemCount > 0,
-              label: Text('${cartProvider.itemCount}'),
+              isLabelVisible: itemCount > 0,
+              label: Text('$itemCount'),
               child: const Icon(Icons.shopping_cart_outlined),
             ),
             activeIcon: Badge(
-              isLabelVisible: cartProvider.itemCount > 0,
-              label: Text('${cartProvider.itemCount}'),
+              isLabelVisible: itemCount > 0,
+              label: Text('$itemCount'),
               child: const Icon(Icons.shopping_cart),
             ),
             label: 'Giỏ hàng',

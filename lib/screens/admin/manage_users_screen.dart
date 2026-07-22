@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:foodgo/core/constants/app_constants.dart';
 import 'package:foodgo/core/enums/user_role.dart';
 import 'package:foodgo/models/app_user.dart';
@@ -66,13 +67,26 @@ class _ManageUsersScreenState extends State<ManageUsersScreen> {
     final newStatus = !user.isActive;
     try {
       await _userService.setUserActiveStatus(user.id, newStatus);
+      if (newStatus) {
+        // Gửi thông báo phê duyệt tới Firestore
+        try {
+          await FirebaseFirestore.instance.collection('notifications').add({
+            'userId': user.id,
+            'title': '🎉 Tài khoản đã được phê duyệt!',
+            'body':
+                'Chúc mừng! Tài khoản ${user.role.toVietnamese()} của bạn đã được Admin phê duyệt kích hoạt sử dụng hệ thống.',
+            'createdAt': Timestamp.now(),
+            'isRead': false,
+          });
+        } catch (_) {}
+      }
       await _loadUsers();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(newStatus
-                ? 'Đã duyệt / mở khóa: ${user.fullName}'
-                : 'Đã khóa: ${user.fullName}'),
+                ? '🎉 Đã duyệt tài khoản & gửi thông báo tới ${user.fullName}'
+                : '🔒 Đã khóa tài khoản ${user.fullName}'),
             backgroundColor: newStatus ? AppColors.success : AppColors.error,
           ),
         );

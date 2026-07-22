@@ -34,4 +34,5 @@ class FirestoreCollections {
   static const String products = 'products';
   static const String orders = 'orders';
   static const String reviews = 'reviews';
+  static const String vouchers = 'vouchers';
 }

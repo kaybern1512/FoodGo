@@ -31,9 +31,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // Tải danh sách nhà hàng đang mở sau khi build xong frame đầu tiên
+    // Tải danh sách nhà hàng & tất cả món ăn sau khi build xong frame đầu tiên
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<RestaurantProvider>().loadOpenRestaurants();
+      context.read<ProductProvider>().searchProducts('');
     });
   }
 
@@ -124,11 +125,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                   icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                    productProvider.clearSearchResults();
-                  },
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                      context.read<ProductProvider>().searchProducts('');
+                    },
                 )
                     : null,
               ),
@@ -142,7 +143,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
             ),
           ),
 
-          // --- LỊCH SỬ TÌM KIẾM NHANH (QUICK CHIPS) ---
+          // --- LỊCH SỬ TÌM KIẾM NHANH (Dùng Wrap chống RenderSingleChildViewport) ---
           if (_searchQuery.isEmpty && _searchHistory.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -165,26 +166,22 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                     ],
                   ),
                   const SizedBox(height: 4),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: _searchHistory.map((query) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ActionChip(
-                            label: Text(query,
-                                style: const TextStyle(fontSize: 11)),
-                            onPressed: () {
-                              _searchController.text = query;
-                              setState(() => _searchQuery = query);
-                              if (_tabController.index == 1) {
-                                productProvider.searchProducts(query);
-                              }
-                            },
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: _searchHistory.map((query) {
+                      return ActionChip(
+                        label: Text(query,
+                            style: const TextStyle(fontSize: 11)),
+                        onPressed: () {
+                          _searchController.text = query;
+                          setState(() => _searchQuery = query);
+                          if (_tabController.index == 1) {
+                            productProvider.searchProducts(query);
+                          }
+                        },
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -235,18 +232,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                   ),
                 ),
 
-                // TAB 2: Tìm kiếm Món ăn
+                // TAB 2: Danh sách & Tìm kiếm Món ăn
                 productProvider.isLoading
-                    ? const LoadingWidget(message: 'Đang tìm món ăn...')
-                    : _searchQuery.isEmpty
-                    ? const EmptyStateWidget(
-                  message: 'Nhập tên món ăn ở ô tìm kiếm phía trên',
-                  icon: Icons.search,
-                )
+                    ? const LoadingWidget(message: 'Đang tải món ăn...')
                     : productProvider.searchResults.isEmpty
                     ? EmptyStateWidget(
-                  message: 'Không tìm thấy món "$_searchQuery"',
+                  message: _searchQuery.isEmpty
+                      ? 'Chưa có món ăn nào khả dụng'
+                      : 'Không tìm thấy món "$_searchQuery"',
                   icon: Icons.fastfood_outlined,
+                  actionLabel: 'Làm mới',
+                  onAction: () => context
+                      .read<ProductProvider>()
+                      .searchProducts(_searchQuery),
                 )
                     : ListView.builder(
                   padding: const EdgeInsets.symmetric(
@@ -279,13 +277,40 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                           final added = cartProvider.addItem(
                               product, restaurantName);
                           if (!added) {
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(
-                              const SnackBar(
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Đổi nhà hàng?'),
                                 content: Text(
-                                    'Giỏ hàng chỉ chứa sản phẩm từ một nhà hàng'),
-                                backgroundColor:
-                                AppColors.error,
+                                    'Giỏ hàng hiện tại đang có món của nhà hàng khác. Bạn có muốn xóa giỏ cũ để thêm món từ "$restaurantName" không?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Hủy'),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary),
+                                    onPressed: () {
+                                      Navigator.pop(ctx);
+                                      cartProvider.addItem(
+                                          product, restaurantName,
+                                          forceReplace: true);
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Đã tạo giỏ hàng mới và thêm sản phẩm!'),
+                                          backgroundColor: AppColors.success,
+                                        ),
+                                      );
+                                    },
+                                    child: const Text(
+                                        'Xóa giỏ cũ & Thêm món mới',
+                                        style:
+                                            TextStyle(color: Colors.white)),
+                                  ),
+                                ],
                               ),
                             );
                           } else {

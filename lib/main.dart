@@ -1,7 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:foodgo/screens/customer/customer_orders_screen.dart';
-import 'package:foodgo/screens/restaurant/edit_product_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -43,6 +41,7 @@ import 'package:foodgo/screens/shipper/shipper_order_detail_screen.dart';
 // Screens - Admin
 import 'package:foodgo/screens/admin/admin_main_screen.dart';
 import 'package:foodgo/screens/admin/manage_products_screen.dart';
+import 'package:foodgo/screens/admin/manage_vouchers_screen.dart';
 
 // Screens - Common
 import 'package:foodgo/screens/common/profile_screen.dart';
@@ -116,6 +115,7 @@ class FoodGoApp extends StatelessWidget {
           // Admin
           AppRoutes.adminMain: (context) => const AdminMainScreen(),
           AppRoutes.manageProducts: (context) => const ManageProductsScreen(),
+          AppRoutes.manageVouchers: (context) => const ManageVouchersScreen(),
 
           // Common
           AppRoutes.profile: (context) => const ProfileScreen(),

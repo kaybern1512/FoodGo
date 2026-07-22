@@ -5,6 +5,7 @@ import 'package:foodgo/core/routes/app_routes.dart';
 import 'package:foodgo/providers/auth_provider.dart';
 import 'package:foodgo/providers/product_provider.dart';
 import 'package:foodgo/providers/restaurant_provider.dart';
+import 'package:foodgo/services/seed_service.dart';
 import 'package:foodgo/widgets/empty_state_widget.dart';
 import 'package:foodgo/widgets/loading_widget.dart';
 
@@ -18,6 +19,7 @@ class RestaurantProductsScreen extends StatefulWidget {
 
 class _RestaurantProductsScreenState
     extends State<RestaurantProductsScreen> {
+  final SeedService _seedService = SeedService();
   String? _lastLoadedRestaurantId;
 
   @override
@@ -42,6 +44,29 @@ class _RestaurantProductsScreenState
     }
   }
 
+  Future<void> _seedDemoProducts() async {
+    final restaurant = context.read<RestaurantProvider>().myRestaurant;
+    if (restaurant == null) return;
+    try {
+      await _seedService.seedDemoProductsForRestaurant(restaurant.id);
+      await _loadProducts();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Đã nạp 5 món ăn mẫu phong phú vào thực đơn!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final productProvider = context.watch<ProductProvider>();
@@ -61,6 +86,12 @@ class _RestaurantProductsScreenState
       appBar: AppBar(
         title: const Text('Quản lý món ăn'),
         actions: [
+          if (restaurant != null)
+            IconButton(
+              tooltip: 'Tạo thực đơn mẫu',
+              icon: const Icon(Icons.auto_awesome, color: Colors.white),
+              onPressed: _seedDemoProducts,
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadProducts,
