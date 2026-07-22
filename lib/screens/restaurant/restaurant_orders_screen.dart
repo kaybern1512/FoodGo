@@ -19,9 +19,9 @@ class RestaurantOrdersScreen extends StatefulWidget {
 }
 
 class _RestaurantOrdersScreenState extends State<RestaurantOrdersScreen> {
-  int _previousOrderCount = 0;
-  bool _isFirstLoad = true;
   OrderProvider? _orderProvider;
+  final Set<String> _knownOrderIds = {};
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -49,24 +49,25 @@ class _RestaurantOrdersScreenState extends State<RestaurantOrdersScreen> {
     }
   }
 
-  void _onOrdersChanged() async {
-    if (!mounted) return;
+  Future<void> _onOrdersChanged() async {
+    if (!mounted || _orderProvider == null) return;
 
-    final currentCount = _orderProvider?.orders.length ?? 0;
+    final currentOrders = _orderProvider!.orders;
+    final currentIds = currentOrders.map((order) => order.id).toSet();
+    final newOrderIds = currentIds.difference(_knownOrderIds);
 
-    if (_isFirstLoad) {
-      _previousOrderCount = currentCount;
-      _isFirstLoad = false;
-      return;
-    }
+    final hasNewPendingOrder = currentOrders.any(
+      (order) =>
+          newOrderIds.contains(order.id) &&
+          order.orderStatus == OrderStatus.pending,
+    );
 
-    if (currentCount > _previousOrderCount) {
+    if (_isInitialized && hasNewPendingOrder) {
       await NotificationService.playNewOrderSound();
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("🔔 Có đơn hàng mới"),
@@ -75,7 +76,9 @@ class _RestaurantOrdersScreenState extends State<RestaurantOrdersScreen> {
       );
     }
 
-    _previousOrderCount = currentCount;
+    _knownOrderIds.clear();
+    _knownOrderIds.addAll(currentIds);
+    _isInitialized = true;
   }
 
   @override

@@ -52,6 +52,7 @@ class RestaurantService {
           .where('isOpen', isEqualTo: true)
           .orderBy('createdAt', descending: true)
           .get();
+
       return snapshot.docs
           .map((doc) =>
               Restaurant.fromMap(doc.data() as Map<String, dynamic>, doc.id))
